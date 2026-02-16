@@ -723,29 +723,39 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
 
     setStrokeRGB(lineCol[0], lineCol[1], lineCol[2]);
     setFillRGB(panel[0], panel[1], panel[2]);
-    rect(totalsX, totalsTop - 110, 240, 110, true, false);
+    // Increased height to fit Subtotal + GST + Total
+    rect(totalsX, totalsTop - 150, 240, 150, true, false);
     setStrokeRGB(lineCol[0], lineCol[1], lineCol[2]);
-    rect(totalsX, totalsTop - 110, 240, 110, false, true);
+    rect(totalsX, totalsTop - 150, 240, 150, false, true);
 
-    // Totals (all amounts include GST if enabled)
+    // Totals
     const gstRatePct = Math.round(parseNum(inv.taxRate || state.settings.defaultTaxRate || 0));
     const gstLabel = inv.taxLabel || "GST";
 
-    pdfText(totalsX + 12, totalsTop - 22, `Total (incl. ${gstLabel}${gstRatePct?` ${gstRatePct}%`:``})`, 10, muted);
-    pdfText(totalsX + 140, totalsTop - 22, fmtMoney(t.total, inv.currency), 11, text);
+    // Subtotal + GST
+    pdfText(totalsX + 12, totalsTop - 22, `Subtotal (excl. ${gstLabel})`, 10, muted);
+    pdfText(totalsX + 140, totalsTop - 22, fmtMoney(t.subtotal, inv.currency), 10, text);
 
-    pdfText(totalsX + 12, totalsTop - 44, "Paid", 10, muted);
-    pdfText(totalsX + 140, totalsTop - 44, fmtMoney(t.paid, inv.currency), 10, text);
+    pdfText(totalsX + 12, totalsTop - 40, `${gstLabel}${gstRatePct?` ${gstRatePct}%`:``}`, 10, muted);
+    pdfText(totalsX + 140, totalsTop - 40, fmtMoney(t.tax, inv.currency), 10, text);
 
-    pdfText(totalsX + 12, totalsTop - 62, "Balance", 10, muted);
-    pdfText(totalsX + 140, totalsTop - 62, fmtMoney(t.balance, inv.currency), 10, text);
+    // Total
+    pdfText(totalsX + 12, totalsTop - 60, `Total (incl. ${gstLabel}${gstRatePct?` ${gstRatePct}%`:``})`, 10, muted);
+    pdfText(totalsX + 140, totalsTop - 60, fmtMoney(t.total, inv.currency), 11, text);
+
+    // Paid / Balance
+    pdfText(totalsX + 12, totalsTop - 84, "Paid", 10, muted);
+    pdfText(totalsX + 140, totalsTop - 84, fmtMoney(t.paid, inv.currency), 10, text);
+
+    pdfText(totalsX + 12, totalsTop - 102, "Balance", 10, muted);
+    pdfText(totalsX + 140, totalsTop - 102, fmtMoney(t.balance, inv.currency), 10, text);
 
     setStrokeRGB(orange[0], orange[1], orange[2]); setLineWidth(2);
-    line(totalsX + 12, totalsTop - 72, totalsX + 228, totalsTop - 72);
+    line(totalsX + 12, totalsTop - 114, totalsX + 228, totalsTop - 114);
     setLineWidth(1);
 
-    pdfText(totalsX + 12, totalsTop - 100, "TOTAL (incl. GST)", 12, text);
-    pdfText(totalsX + 140, totalsTop - 100, fmtMoney(t.total, inv.currency), 12, text);
+    pdfText(totalsX + 12, totalsTop - 140, `TOTAL (incl. ${gstLabel})`, 12, text);
+    pdfText(totalsX + 140, totalsTop - 140, fmtMoney(t.total, inv.currency), 12, text);
 
     // Terms
     const terms = (state.settings.defaultTerms || "").trim();
@@ -1186,7 +1196,13 @@ function updateSelectedPill(){
         </div>
         <div class="bd">
           <div class="grid2">
-            <div class="small muted">Total (incl. ${escapeHtml(inv.taxLabel||"GST")} ${escapeHtml(String(inv.taxRate))}%)</div>
+            <div class="small muted">Subtotal (excl. ${escapeHtml(inv.taxLabel||"GST")})</div>
+            <div class="mono" style="text-align:right">${escapeHtml(fmtMoney(t.subtotal, inv.currency))}</div>
+
+            <div class="small muted">${escapeHtml(inv.taxLabel||"GST")} (${escapeHtml(String(inv.taxRate))}%)</div>
+            <div class="mono" style="text-align:right">${escapeHtml(fmtMoney(t.tax, inv.currency))}</div>
+
+            <div class="small muted" style="font-weight:800">Total (incl. ${escapeHtml(inv.taxLabel||"GST")} ${escapeHtml(String(inv.taxRate))}%)</div>
             <div class="mono" style="text-align:right; font-weight:900">${escapeHtml(fmtMoney(t.total, inv.currency))}</div>
 
             <div class="small muted">Paid</div><div class="mono" style="text-align:right">${escapeHtml(fmtMoney(t.paid, inv.currency))}</div>
