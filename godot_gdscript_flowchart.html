@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GDScript Flow Visualizer V10</title>
+  <title>GDScript Flow Visualizer V12</title>
   <style>
     :root{
       --bg:#1e1f22;
@@ -32,6 +32,7 @@
       outline:3px solid rgba(240,140,43,.65);
       outline-offset:-10px;
     }
+
     .app{
       display:grid;
       grid-template-columns:430px 1fr;
@@ -49,6 +50,7 @@
     .sidebar{display:flex;flex-direction:column;min-height:0}
     .section{padding:16px;border-bottom:1px solid rgba(255,255,255,.06)}
     .section:last-child{border-bottom:0}
+
     h1{margin:0 0 6px;font-size:22px;line-height:1.2}
     h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
     p{margin:0 0 10px;color:var(--muted)}
@@ -102,11 +104,6 @@
     .toggle-row input{accent-color:#f08c2b}
     .range-label{display:flex;justify-content:space-between;gap:10px}
     .range-label span:last-child{color:#fff}
-    .mini-label{
-      font-size:11px;
-      color:var(--muted);
-      margin-top:2px;
-    }
 
     .legend-box{display:grid;gap:8px}
     .legend-item{display:flex;gap:10px;align-items:flex-start}
@@ -229,7 +226,7 @@
   <aside class="panel sidebar">
     <div class="section">
       <h1>GDScript Flow Visualizer</h1>
-      <p>Imports one or more <strong>.gd</strong> files and draws cleaner flow charts with clearer routing, colored ports, and adjustable noodle behavior.</p>
+      <p>Imports one or more <strong>.gd</strong> files and draws cleaner flow charts with proper lane routing, distributed ports, stronger edge separation, rounded orthogonal links, and working arrowheads.</p>
 
       <div class="controls">
         <div class="row">
@@ -248,7 +245,7 @@
       </div>
 
       <div class="note" style="margin-top:12px">
-        This version restores drag and drop, brings back hard spacing limits, and adds colored connection points plus more noodle controls.
+        This build fixes rounded orthogonal node links properly and uses real SVG markers for arrowheads, so both display and export correctly.
       </div>
       <div id="errorBox" class="error" hidden></div>
     </div>
@@ -269,45 +266,56 @@
 
         <div class="subgrid">
           <div class="stack">
-            <label class="range-label"><span>Vertical spacing</span><span id="vSpacingValue">28</span></label>
-            <input id="vSpacingRange" type="range" min="6" max="140" value="28" />
+            <label class="range-label"><span>Vertical spacing</span><span id="vSpacingValue">30</span></label>
+            <input id="vSpacingRange" type="range" min="8" max="180" value="30" />
           </div>
           <div class="stack">
-            <label class="range-label"><span>Vertical hard limit</span><span id="vSpacingHardValue">20</span></label>
-            <input id="vSpacingHardRange" type="range" min="0" max="140" value="20" />
-          </div>
-        </div>
-
-        <div class="subgrid">
-          <div class="stack">
-            <label class="range-label"><span>Branch spacing</span><span id="hSpacingValue">200</span></label>
-            <input id="hSpacingRange" type="range" min="100" max="700" value="200" />
-          </div>
-          <div class="stack">
-            <label class="range-label"><span>Branch hard limit</span><span id="hSpacingHardValue">150</span></label>
-            <input id="hSpacingHardRange" type="range" min="40" max="700" value="150" />
+            <label class="range-label"><span>Vertical hard limit</span><span id="vSpacingHardValue">22</span></label>
+            <input id="vSpacingHardRange" type="range" min="0" max="180" value="22" />
           </div>
         </div>
 
         <div class="subgrid">
           <div class="stack">
-            <label class="range-label"><span>Tree spacing</span><span id="treeSpacingValue">220</span></label>
-            <input id="treeSpacingRange" type="range" min="60" max="1200" value="220" />
+            <label class="range-label"><span>Branch spacing</span><span id="hSpacingValue">220</span></label>
+            <input id="hSpacingRange" type="range" min="110" max="800" value="220" />
           </div>
           <div class="stack">
-            <label class="range-label"><span>Tree hard limit</span><span id="treeSpacingHardValue">180</span></label>
-            <input id="treeSpacingHardRange" type="range" min="20" max="1200" value="180" />
+            <label class="range-label"><span>Branch hard limit</span><span id="hSpacingHardValue">160</span></label>
+            <input id="hSpacingHardRange" type="range" min="40" max="800" value="160" />
           </div>
         </div>
 
         <div class="subgrid">
           <div class="stack">
-            <label class="range-label"><span>Noodle detour</span><span id="noodleDetourValue">64</span></label>
-            <input id="noodleDetourRange" type="range" min="12" max="220" value="64" />
+            <label class="range-label"><span>Tree spacing</span><span id="treeSpacingValue">260</span></label>
+            <input id="treeSpacingRange" type="range" min="80" max="1400" value="260" />
           </div>
           <div class="stack">
-            <label class="range-label"><span>Noodle hard limit</span><span id="noodleHardValue">40</span></label>
-            <input id="noodleHardRange" type="range" min="0" max="220" value="40" />
+            <label class="range-label"><span>Tree hard limit</span><span id="treeSpacingHardValue">200</span></label>
+            <input id="treeSpacingHardRange" type="range" min="20" max="1400" value="200" />
+          </div>
+        </div>
+
+        <div class="subgrid">
+          <div class="stack">
+            <label class="range-label"><span>Noodle detour</span><span id="noodleDetourValue">86</span></label>
+            <input id="noodleDetourRange" type="range" min="18" max="260" value="86" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Noodle hard limit</span><span id="noodleHardValue">54</span></label>
+            <input id="noodleHardRange" type="range" min="0" max="260" value="54" />
+          </div>
+        </div>
+
+        <div class="subgrid">
+          <div class="stack">
+            <label class="range-label"><span>Bus lane spacing</span><span id="busLaneSpacingValue">30</span></label>
+            <input id="busLaneSpacingRange" type="range" min="12" max="80" value="30" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Cross-call rail gap</span><span id="crossRailGapValue">140</span></label>
+            <input id="crossRailGapRange" type="range" min="60" max="260" value="140" />
           </div>
         </div>
 
@@ -318,7 +326,7 @@
           </div>
           <div class="stack">
             <label class="range-label"><span>Box height</span><span id="boxHeightValue">60</span></label>
-            <input id="boxHeightRange" type="range" min="36" max="160" value="60" />
+            <input id="boxHeightRange" type="range" min="36" max="170" value="60" />
           </div>
         </div>
       </div>
@@ -329,30 +337,41 @@
       <div class="controls">
         <label>Noodle style</label>
         <select id="noodleStyleSelect">
-          <option value="orthogonal">Orthogonal</option>
           <option value="rounded">Rounded orthogonal</option>
+          <option value="orthogonal">Orthogonal</option>
           <option value="soft">Soft curve</option>
         </select>
 
         <div class="grid2">
           <div class="stack">
-            <label class="range-label"><span>Noodle separation</span><span id="noodleSeparationValue">18</span></label>
-            <input id="noodleSeparationRange" type="range" min="0" max="80" value="18" />
+            <label class="range-label"><span>Roundness</span><span id="roundnessValue">18</span></label>
+            <input id="roundnessRange" type="range" min="0" max="40" value="18" />
           </div>
           <div class="stack">
-            <label class="range-label"><span>Thickness</span><span id="lineThicknessValue">2.4</span></label>
-            <input id="lineThicknessRange" type="range" min="1" max="6" step="0.2" value="2.4" />
+            <label class="range-label"><span>Noodle separation</span><span id="noodleSeparationValue">20</span></label>
+            <input id="noodleSeparationRange" type="range" min="0" max="100" value="20" />
           </div>
         </div>
 
         <div class="grid2">
           <div class="stack">
-            <label class="range-label"><span>Port size</span><span id="portSizeValue">5</span></label>
-            <input id="portSizeRange" type="range" min="0" max="10" value="5" />
+            <label class="range-label"><span>Thickness</span><span id="lineThicknessValue">2.4</span></label>
+            <input id="lineThicknessRange" type="range" min="1" max="7" step="0.2" value="2.4" />
           </div>
           <div class="stack">
-            <label class="range-label"><span>Cross-link lift</span><span id="crossLiftValue">42</span></label>
-            <input id="crossLiftRange" type="range" min="8" max="120" value="42" />
+            <label class="range-label"><span>Port size</span><span id="portSizeValue">6</span></label>
+            <input id="portSizeRange" type="range" min="0" max="12" value="6" />
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="stack">
+            <label class="range-label"><span>Jump bridge size</span><span id="bridgeHeightValue">8</span></label>
+            <input id="bridgeHeightRange" type="range" min="0" max="20" value="8" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Arrow size</span><span id="arrowSizeValue">10</span></label>
+            <input id="arrowSizeRange" type="range" min="6" max="18" value="10" />
           </div>
         </div>
       </div>
@@ -366,6 +385,8 @@
         <label class="toggle-row"><input id="crossLinksCheckbox" type="checkbox" checked /> Show blue cross-calls</label>
         <label class="toggle-row"><input id="portsCheckbox" type="checkbox" checked /> Show connection points</label>
         <label class="toggle-row"><input id="outlinesCheckbox" type="checkbox" checked /> Use dark edge outlines</label>
+        <label class="toggle-row"><input id="arrowsCheckbox" type="checkbox" checked /> Show arrowheads</label>
+        <label class="toggle-row"><input id="bridgesCheckbox" type="checkbox" checked /> Show jump-over bridges</label>
       </div>
     </div>
 
@@ -406,7 +427,7 @@
           <div>
             <h3 style="margin:0 0 8px;font-size:24px;color:#fff">Drop in your .gd files</h3>
             <div style="max-width:620px">
-              This build restores drag and drop, exposes hard spacing limits again, and makes the node ports color-coded so the routing reads much more clearly.
+              Rounded orthogonal links and arrowheads are fixed in this version.
             </div>
           </div>
         </div>
@@ -432,22 +453,28 @@ const state = {
 
   fontSize: 13,
 
-  vSpacing: 28,
-  vSpacingHard: 20,
+  vSpacing: 30,
+  vSpacingHard: 22,
 
-  hSpacing: 200,
-  hSpacingHard: 150,
+  hSpacing: 220,
+  hSpacingHard: 160,
 
-  treeSpacing: 220,
-  treeSpacingHard: 180,
+  treeSpacing: 260,
+  treeSpacingHard: 200,
 
-  noodleDetour: 64,
-  noodleHard: 40,
-  noodleStyle: 'orthogonal',
-  noodleSeparation: 18,
+  noodleDetour: 86,
+  noodleHard: 54,
+  noodleStyle: 'rounded',
+  roundness: 18,
+  noodleSeparation: 20,
+
   lineThickness: 2.4,
-  portSize: 5,
-  crossLift: 42,
+  portSize: 6,
+  bridgeHeight: 8,
+  arrowSize: 10,
+
+  busLaneSpacing: 30,
+  crossRailGap: 140,
 
   boxWidth: 300,
   boxHeight: 60,
@@ -456,7 +483,9 @@ const state = {
   showMergeNodes: true,
   showCrossLinks: true,
   showPorts: true,
-  showOutlines: true
+  showOutlines: true,
+  showArrows: true,
+  showBridges: true
 };
 
 const els = {
@@ -480,10 +509,14 @@ const els = {
   noodleDetourRange,
   noodleHardRange,
   noodleStyleSelect,
+  roundnessRange,
   noodleSeparationRange,
   lineThicknessRange,
   portSizeRange,
-  crossLiftRange,
+  bridgeHeightRange,
+  arrowSizeRange,
+  busLaneSpacingRange,
+  crossRailGapRange,
   boxWidthRange,
   boxHeightRange,
 
@@ -492,6 +525,8 @@ const els = {
   crossLinksCheckbox,
   portsCheckbox,
   outlinesCheckbox,
+  arrowsCheckbox,
+  bridgesCheckbox,
 
   fontSizeValue,
   vSpacingValue,
@@ -502,10 +537,14 @@ const els = {
   treeSpacingHardValue,
   noodleDetourValue,
   noodleHardValue,
+  roundnessValue,
   noodleSeparationValue,
   lineThicknessValue,
   portSizeValue,
-  crossLiftValue,
+  bridgeHeightValue,
+  arrowSizeValue,
+  busLaneSpacingValue,
+  crossRailGapValue,
   boxWidthValue,
   boxHeightValue,
 
@@ -888,12 +927,17 @@ function clampSpacing(value, hardValue){
   return Math.max(value, hardValue);
 }
 
-function portFor(node, pos, colW, nodeH, side){
+function portFor(pos, colW, nodeH, side, slotIndex=0, slotCount=1){
+  const safeCount = Math.max(1, slotCount);
+  const spacing = nodeH / (safeCount + 1);
+  const slotY = pos.y + spacing * (slotIndex + 1);
+  const centerY = pos.y + nodeH / 2;
+
   if (side === 'top') return { x: pos.x + colW/2, y: pos.y };
   if (side === 'bottom') return { x: pos.x + colW/2, y: pos.y + nodeH };
-  if (side === 'right') return { x: pos.x + colW, y: pos.y + nodeH/2 };
-  if (side === 'left') return { x: pos.x, y: pos.y + nodeH/2 };
-  return { x: pos.x + colW/2, y: pos.y + nodeH/2 };
+  if (side === 'right') return { x: pos.x + colW, y: safeCount > 1 ? slotY : centerY };
+  if (side === 'left') return { x: pos.x, y: safeCount > 1 ? slotY : centerY };
+  return { x: pos.x + colW/2, y: centerY };
 }
 
 function nodePalette(type){
@@ -914,42 +958,203 @@ function edgeColor(edge, fromNode, toNode){
   if (edge.kind === 'merge') return '#b7c0ca';
   if (fromNode.type === 'signal') return '#7eb5ff';
   if (toNode.type === 'return') return '#ff6b6b';
-  return '#8fa0b5';
+  return '#99a9bc';
 }
 
-function pathOrthogonal(points){
-  return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ');
+function edgeWidth(edge, fromNode, toNode){
+  if (edge.kind === 'yes' || edge.kind === 'no') return Math.max(2.6, state.lineThickness + 0.3);
+  if (fromNode.type === 'signal') return Math.max(1.8, state.lineThickness - 0.3);
+  if (toNode.type === 'return') return Math.max(2.4, state.lineThickness + 0.1);
+  return state.lineThickness;
 }
 
-function pathRounded(points, radius=14){
-  if (points.length < 2) return '';
+function drawPort(x,y,color){
+  if (!state.showPorts || state.portSize <= 0) return '';
+  const r = state.portSize;
+  return `
+    <circle cx="${x}" cy="${y}" r="${r + 2}" fill="#000" opacity="0.34"></circle>
+    <circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="rgba(255,255,255,.45)" stroke-width="1.2"></circle>
+  `;
+}
+
+function drawArrowMarkerDefs(){
+  const size = state.arrowSize;
+  const refX = size - 1;
+  const refY = size / 2;
+  const path = `M0,0 L${size},${size/2} L0,${size} Z`;
+
+  return `
+    <marker id="arrow-green" markerWidth="${size}" markerHeight="${size}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="${path}" fill="#58c27d"></path>
+    </marker>
+    <marker id="arrow-yellow" markerWidth="${size}" markerHeight="${size}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="${path}" fill="#ffd166"></path>
+    </marker>
+    <marker id="arrow-blue" markerWidth="${size}" markerHeight="${size}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="${path}" fill="#7eb5ff"></path>
+    </marker>
+    <marker id="arrow-red" markerWidth="${size}" markerHeight="${size}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="${path}" fill="#ff6b6b"></path>
+    </marker>
+    <marker id="arrow-gray" markerWidth="${size}" markerHeight="${size}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="${path}" fill="#b7c0ca"></path>
+    </marker>
+    <marker id="arrow-default" markerWidth="${size}" markerHeight="${size}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="${path}" fill="#99a9bc"></path>
+    </marker>
+  `;
+}
+
+function arrowMarkerForColor(color){
+  if (!state.showArrows) return '';
+  if (color === '#58c27d') return 'url(#arrow-green)';
+  if (color === '#ffd166') return 'url(#arrow-yellow)';
+  if (color === '#7eb5ff') return 'url(#arrow-blue)';
+  if (color === '#ff6b6b') return 'url(#arrow-red)';
+  if (color === '#b7c0ca') return 'url(#arrow-gray)';
+  return 'url(#arrow-default)';
+}
+
+function buildNodeEdgeMeta(fn){
+  const edgeList = fn.graph.edges.slice();
+  const outgoing = new Map();
+  const incoming = new Map();
+
+  edgeList.forEach(edge => {
+    if (!outgoing.has(edge.from)) outgoing.set(edge.from, []);
+    if (!incoming.has(edge.to)) incoming.set(edge.to, []);
+    outgoing.get(edge.from).push(edge);
+    incoming.get(edge.to).push(edge);
+  });
+
+  const sortByTargetY = (a,b) => {
+    const ay = fn._positions.get(a.to)?.y ?? 0;
+    const by = fn._positions.get(b.to)?.y ?? 0;
+    return ay - by;
+  };
+  const sortBySourceY = (a,b) => {
+    const ay = fn._positions.get(a.from)?.y ?? 0;
+    const by = fn._positions.get(b.from)?.y ?? 0;
+    return ay - by;
+  };
+
+  outgoing.forEach(arr => arr.sort(sortByTargetY));
+  incoming.forEach(arr => arr.sort(sortBySourceY));
+
+  const outSlotIndex = new Map();
+  const inSlotIndex = new Map();
+
+  outgoing.forEach(arr => arr.forEach((edge, i) => outSlotIndex.set(edge, i)));
+  incoming.forEach(arr => arr.forEach((edge, i) => inSlotIndex.set(edge, i)));
+
+  return { outgoing, incoming, outSlotIndex, inSlotIndex };
+}
+
+function orthogonalSegmentsFromPoints(points, edgeId){
+  const segments = [];
+  for (let i=0; i<points.length - 1; i++){
+    const a = points[i];
+    const b = points[i + 1];
+    segments.push({
+      edgeId,
+      x1: a.x, y1: a.y,
+      x2: b.x, y2: b.y,
+      kind: 'normal'
+    });
+  }
+  return segments;
+}
+
+function segmentIntersections(segments){
+  const verticals = [];
+  const horizontals = [];
+
+  segments.forEach(seg => {
+    if (seg.kind !== 'normal') return;
+    if (seg.x1 === seg.x2) verticals.push(seg);
+    else if (seg.y1 === seg.y2) horizontals.push(seg);
+  });
+
+  const intersections = new Map();
+
+  verticals.forEach(v => {
+    horizontals.forEach(h => {
+      const minHX = Math.min(h.x1, h.x2);
+      const maxHX = Math.max(h.x1, h.x2);
+      const minVY = Math.min(v.y1, v.y2);
+      const maxVY = Math.max(v.y1, v.y2);
+
+      const crosses = v.x1 > minHX + 10 && v.x1 < maxHX - 10 && h.y1 > minVY + 10 && h.y1 < maxVY - 10;
+      if (!crosses) return;
+      if (v.edgeId === h.edgeId) return;
+
+      const point = { x: v.x1, y: h.y1 };
+
+      if (!intersections.has(h.edgeId)) intersections.set(h.edgeId, []);
+      intersections.get(h.edgeId).push(point);
+    });
+  });
+
+  intersections.forEach(arr => arr.sort((a,b) => a.x - b.x));
+  return intersections;
+}
+
+function roundedOrthogonalPath(points, radius, bridgePoints){
+  if (!points.length) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
   let d = `M ${points[0].x} ${points[0].y}`;
 
   for (let i = 1; i < points.length - 1; i++){
-    const p0 = points[i - 1];
-    const p1 = points[i];
-    const p2 = points[i + 1];
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
 
-    const vx1 = p1.x - p0.x;
-    const vy1 = p1.y - p0.y;
-    const vx2 = p2.x - p1.x;
-    const vy2 = p2.y - p1.y;
+    const dx1 = curr.x - prev.x;
+    const dy1 = curr.y - prev.y;
+    const dx2 = next.x - curr.x;
+    const dy2 = next.y - curr.y;
 
-    const len1 = Math.hypot(vx1, vy1);
-    const len2 = Math.hypot(vx2, vy2);
+    const len1 = Math.hypot(dx1, dy1);
+    const len2 = Math.hypot(dx2, dy2);
 
     if (!len1 || !len2){
-      d += ` L ${p1.x} ${p1.y}`;
+      d += ` L ${curr.x} ${curr.y}`;
       continue;
     }
 
     const r = Math.min(radius, len1 / 2, len2 / 2);
-    const inX = p1.x - (vx1 / len1) * r;
-    const inY = p1.y - (vy1 / len1) * r;
-    const outX = p1.x + (vx2 / len2) * r;
-    const outY = p1.y + (vy2 / len2) * r;
 
-    d += ` L ${inX} ${inY} Q ${p1.x} ${p1.y} ${outX} ${outY}`;
+    const inX = curr.x - (dx1 / len1) * r;
+    const inY = curr.y - (dy1 / len1) * r;
+    const outX = curr.x + (dx2 / len2) * r;
+    const outY = curr.y + (dy2 / len2) * r;
+
+    if (prev.y === curr.y && state.showBridges && bridgePoints && bridgePoints.length){
+      const minX = Math.min(prev.x, inX);
+      const maxX = Math.max(prev.x, inX);
+      const local = bridgePoints.filter(p => p.x > minX + 8 && p.x < maxX - 8 && Math.abs(p.y - prev.y) < 0.01);
+
+      if (!local.length){
+        d += ` L ${inX} ${inY}`;
+      } else {
+        const dir = inX >= prev.x ? 1 : -1;
+        const ordered = local.sort((a,b) => dir > 0 ? a.x - b.x : b.x - a.x);
+        ordered.forEach(p => {
+          const rr = state.bridgeHeight;
+          const before = p.x - dir * (rr + 2);
+          const peak = p.x;
+          const after = p.x + dir * (rr + 2);
+          d += ` L ${before} ${prev.y}`;
+          d += ` Q ${peak} ${prev.y - rr} ${after} ${prev.y}`;
+        });
+        d += ` L ${inX} ${inY}`;
+      }
+    } else {
+      d += ` L ${inX} ${inY}`;
+    }
+
+    d += ` Q ${curr.x} ${curr.y} ${outX} ${outY}`;
   }
 
   const last = points[points.length - 1];
@@ -957,22 +1162,68 @@ function pathRounded(points, radius=14){
   return d;
 }
 
-function pathSoft(points){
-  if (points.length < 2) return '';
-  if (points.length === 2){
-    const a = points[0], b = points[1];
-    const dx = Math.abs(b.x - a.x) * 0.5;
-    return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+function orthogonalPath(points, bridgePoints){
+  if (!points.length) return '';
+  let d = `M ${points[0].x} ${points[0].y}`;
+
+  for (let i = 0; i < points.length - 1; i++){
+    const a = points[i];
+    const b = points[i + 1];
+
+    if (a.y === b.y && state.showBridges && bridgePoints && bridgePoints.length){
+      const minX = Math.min(a.x, b.x);
+      const maxX = Math.max(a.x, b.x);
+      const local = bridgePoints.filter(p => p.x > minX + 8 && p.x < maxX - 8 && Math.abs(p.y - a.y) < 0.01);
+
+      if (!local.length){
+        d += ` L ${b.x} ${b.y}`;
+      } else {
+        const dir = b.x > a.x ? 1 : -1;
+        const ordered = local.sort((p,q) => dir > 0 ? p.x - q.x : q.x - p.x);
+        ordered.forEach(p => {
+          const r = state.bridgeHeight;
+          const before = p.x - dir * (r + 2);
+          const peak = p.x;
+          const after = p.x + dir * (r + 2);
+          d += ` L ${before} ${a.y}`;
+          d += ` Q ${peak} ${a.y - r} ${after} ${a.y}`;
+        });
+        d += ` L ${b.x} ${b.y}`;
+      }
+    } else {
+      d += ` L ${b.x} ${b.y}`;
+    }
   }
 
-  const start = points[0];
-  const end = points[points.length - 1];
-  const midA = points[Math.floor((points.length - 1) / 2)];
-  const midB = points[Math.ceil((points.length - 1) / 2)];
-  return `M ${start.x} ${start.y} C ${midA.x} ${start.y}, ${midB.x} ${end.y}, ${end.x} ${end.y}`;
+  return d;
 }
 
-function polylinePointsForEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, edgeIndex=0){
+function softPath(points){
+  if (points.length < 2) return '';
+  const start = points[0];
+  const end = points[points.length - 1];
+  const dx = Math.abs(end.x - start.x) * 0.45;
+  return `M ${start.x} ${start.y} C ${start.x + dx} ${start.y}, ${end.x - dx} ${end.y}, ${end.x} ${end.y}`;
+}
+
+function pathForPoints(points, bridgePoints){
+  if (state.noodleStyle === 'soft') return softPath(points);
+  if (state.noodleStyle === 'orthogonal') return orthogonalPath(points, bridgePoints);
+  return roundedOrthogonalPath(points, state.roundness, bridgePoints);
+}
+
+function drawEdgePath(d, stroke, width){
+  const markerEnd = arrowMarkerForColor(stroke);
+  const outline = state.showOutlines
+    ? `<path d="${d}" fill="none" stroke="#000" stroke-width="${width + 2.4}" opacity="0.42" stroke-linecap="round" stroke-linejoin="round" />`
+    : '';
+
+  const main = `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"${markerEnd ? ` marker-end="${markerEnd}"` : ''} />`;
+
+  return outline + main;
+}
+
+function polylinePointsForEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, meta, edgeIndex, busBaseX){
   let startSide = 'bottom';
   let endSide = 'top';
 
@@ -993,108 +1244,97 @@ function polylinePointsForEdge(fromNode, toNode, fromPos, toPos, edge, colW, nod
     endSide = 'top';
   }
 
-  const a = portFor(fromNode, fromPos, colW, nodeH, startSide);
-  const b = portFor(toNode, toPos, colW, nodeH, endSide);
+  const outCount = meta.outgoing.get(edge.from)?.length || 1;
+  const inCount = meta.incoming.get(edge.to)?.length || 1;
+  const outIndex = meta.outSlotIndex.get(edge) || 0;
+  const inIndex = meta.inSlotIndex.get(edge) || 0;
 
-  const detour = clampSpacing(state.noodleDetour, state.noodleHard);
-  const sep = state.noodleSeparation * (edgeIndex % 2 === 0 ? 1 : -1);
-  const extra = sep + (edgeIndex * 3);
+  const a = portFor(fromPos, colW, nodeH, startSide, outIndex, outCount);
+  const b = portFor(toPos, colW, nodeH, endSide, inIndex, inCount);
+
+  const detour = clampSpacing(state.noodleDetour, state.noodleHard) * 1.4;
+  const sep = state.noodleSeparation;
+  const busLaneX = busBaseX + edgeIndex * state.busLaneSpacing;
+  const extra = sep * ((edgeIndex % 2 === 0) ? 1 : -1);
 
   let points;
 
-  if (state.noodleStyle === 'soft'){
-    if (startSide === 'right'){
-      points = [
-        a,
-        { x: a.x + detour + extra, y: a.y },
-        { x: b.x - detour, y: b.y },
-        b
-      ];
-    } else if (startSide === 'left'){
-      points = [
-        a,
-        { x: a.x - detour + extra, y: a.y },
-        { x: b.x + detour, y: b.y },
-        b
-      ];
-    } else {
-      points = [
-        a,
-        { x: a.x, y: a.y + detour / 2 + extra },
-        { x: b.x, y: b.y - detour / 2 },
-        b
-      ];
-    }
-  } else {
-    let midX = a.x;
-    let firstY = a.y;
-    let lastY = b.y;
-
-    if (edge.kind === 'yes'){
-      midX = a.x + detour + extra;
-    } else if (edge.kind === 'no'){
-      midX = a.x - detour + extra;
-    } else if (fromNode.type === 'signal'){
-      midX = Math.max(a.x + detour + extra, (a.x + b.x) / 2 + detour * 0.35);
-    } else {
-      midX = a.x + extra;
-    }
-
-    if (startSide === 'bottom' && endSide === 'top'){
-      const midY = (a.y + b.y) / 2;
-      points = [
-        a,
-        { x: a.x, y: midY + extra * 0.2 },
-        { x: b.x, y: midY + extra * 0.2 },
-        b
-      ];
-    } else {
-      points = [
-        a,
-        { x: midX, y: a.y },
-        { x: midX, y: b.y },
-        b
-      ];
-    }
+  if (fromNode.type === 'signal'){
+    const crossLaneX = Math.max(a.x + detour + extra, busLaneX);
+    points = [
+      a,
+      { x: crossLaneX, y: a.y },
+      { x: crossLaneX, y: b.y },
+      b
+    ];
+    return { a, b, points };
   }
 
-  return { a, b, points, startSide, endSide };
+  if (startSide === 'bottom' && endSide === 'top'){
+    const midY = (a.y + b.y) / 2 + extra * 0.2;
+    points = [
+      a,
+      { x: a.x, y: midY },
+      { x: b.x, y: midY },
+      b
+    ];
+    return { a, b, points };
+  }
+
+  if (startSide === 'right'){
+    const laneX = Math.max(a.x + detour + (outIndex * 12), busLaneX);
+    points = [
+      a,
+      { x: laneX, y: a.y },
+      { x: laneX, y: b.y },
+      b
+    ];
+    return { a, b, points };
+  }
+
+  if (startSide === 'left'){
+    const laneX = Math.min(a.x - detour - (outIndex * 12), fromPos.x - detour - 20);
+    points = [
+      a,
+      { x: laneX, y: a.y },
+      { x: laneX, y: b.y },
+      b
+    ];
+    return { a, b, points };
+  }
+
+  if (state.noodleStyle === 'soft'){
+    points = [
+      a,
+      { x: a.x + extra, y: a.y + detour * 0.55 },
+      { x: b.x, y: b.y - detour * 0.55 },
+      b
+    ];
+    return { a, b, points };
+  }
+
+  points = [
+    a,
+    { x: a.x + extra, y: a.y + detour * 0.5 },
+    { x: b.x, y: a.y + detour * 0.5 },
+    b
+  ];
+  return { a, b, points };
 }
 
-function pathForPoints(points){
-  if (state.noodleStyle === 'rounded') return pathRounded(points, 14);
-  if (state.noodleStyle === 'soft') return pathSoft(points);
-  return pathOrthogonal(points);
-}
-
-function drawPort(x,y,color){
-  if (!state.showPorts || state.portSize <= 0) return '';
-  const r = state.portSize;
-  return `
-    <circle cx="${x}" cy="${y}" r="${r + 2}" fill="#000" opacity="0.35"></circle>
-    <circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="rgba(255,255,255,.45)" stroke-width="1.2"></circle>
-  `;
-}
-
-function drawOrthogonalEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, edgeIndex=0){
+function drawFlowEdgeBundle(edgeRecord, bridgePoints){
+  const { edge, fromNode, toNode, a, b, points } = edgeRecord;
   const stroke = edgeColor(edge, fromNode, toNode);
-  const width = Number(state.lineThickness);
-  const { a, b, points } = polylinePointsForEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, edgeIndex);
-  const path = pathForPoints(points);
-
-  const outline = state.showOutlines
-    ? `<path d="${path}" fill="none" stroke="#000" stroke-width="${width + 2.4}" opacity="0.42" stroke-linecap="round" stroke-linejoin="round" />`
-    : '';
-
-  const main = `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" />`;
+  const width = edgeWidth(edge, fromNode, toNode);
+  const d = pathForPoints(points, bridgePoints);
 
   let label = '';
   if (edge.label){
     const lx = edge.kind === 'yes'
-      ? a.x + 16
+      ? a.x + 18
       : edge.kind === 'no'
       ? a.x - 34
-      : (a.x + b.x) / 2 + 8;
+      : (a.x + b.x) / 2 + 6;
 
     const ly = edge.kind === 'yes' || edge.kind === 'no'
       ? a.y - 8
@@ -1103,41 +1343,45 @@ function drawOrthogonalEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH,
     label = `<text x="${lx}" y="${ly}" font-size="11" fill="${stroke}" font-weight="700">${escapeXml(edge.label)}</text>`;
   }
 
-  return outline + main + drawPort(a.x, a.y, stroke) + drawPort(b.x, b.y, stroke) + label;
+  return drawEdgePath(d, stroke, width) + drawPort(a.x, a.y, stroke) + drawPort(b.x, b.y, stroke) + label;
 }
 
-function drawCrossLink(x1,y1,x2,y2,label,color='#7eb5ff'){
-  const lift = Math.min(y1,y2) - clampSpacing(state.crossLift, 8);
+function drawCrossLink(x1,y1,x2,y2,label,color='#7eb5ff', railX){
   const points = [
     {x:x1,y:y1},
-    {x:x1 + 18,y:y1},
-    {x:x1 + 18,y:lift},
-    {x:x2 - 18,y:lift},
+    {x:railX - 18,y:y1},
+    {x:railX,y:y1},
+    {x:railX,y:y2},
     {x:x2 - 18,y:y2},
     {x:x2,y:y2}
   ];
-  const d = state.noodleStyle === 'rounded' ? pathRounded(points, 12) : pathOrthogonal(points);
 
+  const d = state.noodleStyle === 'soft'
+    ? softPath([{x:x1,y:y1},{x:railX,y:y1},{x:railX,y:y2},{x:x2,y:y2}])
+    : state.noodleStyle === 'orthogonal'
+    ? orthogonalPath(points, [])
+    : roundedOrthogonalPath(points, Math.max(8, state.roundness - 2), []);
+
+  const width = Math.max(1.8, state.lineThickness - 0.2);
+  const markerEnd = arrowMarkerForColor(color);
   const outline = state.showOutlines
-    ? `<path d="${d}" fill="none" stroke="#000" stroke-width="${state.lineThickness + 2.2}" opacity="0.34" stroke-linecap="round" stroke-linejoin="round" />`
+    ? `<path d="${d}" fill="none" stroke="#000" stroke-width="${width + 2.2}" opacity="0.34" stroke-linecap="round" stroke-linejoin="round" />`
     : '';
 
   return `
     ${outline}
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="${state.lineThickness + 0.2}" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5" />
-    <polygon points="${x2},${y2} ${x2-9},${y2-5} ${x2-9},${y2+5}" fill="${color}" />
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 5"${markerEnd ? ` marker-end="${markerEnd}"` : ''} />
     ${drawPort(x1, y1, color)}
     ${drawPort(x2, y2, color)}
-    ${label ? `<text x="${(x1+x2)/2}" y="${lift - 6}" font-size="11" fill="${color}" font-weight="700">${escapeXml(label)}</text>` : ''}
+    ${label ? `<text x="${railX + 10}" y="${Math.min(y1,y2) - 6}" font-size="11" fill="${color}" font-weight="700">${escapeXml(label)}</text>` : ''}
   `;
 }
 
 function renderFlowSvg(script){
   const fontSize = state.fontSize;
   const margin = 34;
-
   const laneGap = clampSpacing(state.hSpacing, state.hSpacingHard);
-  const treeGap = clampSpacing(state.treeSpacing, state.treeSpacingHard) + (state.showCrossLinks ? 110 : 0);
+  const treeGap = clampSpacing(state.treeSpacing, state.treeSpacingHard) + (state.showCrossLinks ? state.crossRailGap + 80 : 0);
   const colW = state.boxWidth;
   const nodeH = state.boxHeight;
   const boxRadius = state.squareBoxes ? 8 : 16;
@@ -1146,21 +1390,29 @@ function renderFlowSvg(script){
   let contentBoxes = '';
   let contentEdges = '';
   let contentCross = '';
-
   let y = margin;
   let maxRight = 0;
   const functionAnchors = new Map();
   const treeLayouts = [];
-  const rowMaxWidth = 5200;
+  const rowMaxWidth = 5400;
 
   script.functions.forEach(fn => {
     const lanes = fn.graph.nodes.map(n => n.lane || 0);
     const maxLane = lanes.length ? Math.max(...lanes) : 0;
     const minLane = lanes.length ? Math.min(...lanes) : 0;
     const laneSpan = maxLane - minLane;
-    const treeWidth = colW + laneSpan * laneGap;
-    const treeHeight = (Math.max(0, ...fn.graph.nodes.map(n => n.row || 0)) + 1) * (nodeH + rowGap + 4);
-    treeLayouts.push({ fn, minLane, maxLane, treeWidth, treeHeight });
+
+    const outgoingCounts = {};
+    fn.graph.edges.forEach(e => outgoingCounts[e.from] = (outgoingCounts[e.from] || 0) + 1);
+    const maxOutgoing = Math.max(1, ...Object.values(outgoingCounts));
+
+    const densityBonus = Math.min(3, Math.max(0, maxOutgoing - 2)) * 22;
+    const treeWidth = colW + laneSpan * laneGap + densityBonus;
+    const rowCount = Math.max(0, ...fn.graph.nodes.map(n => n.row || 0)) + 1;
+    const denseRows = fn.graph.nodes.filter(n => fn.graph.edges.filter(e => e.from === n.id || e.to === n.id).length > 3).length;
+    const localRowGap = rowGap + Math.min(80, denseRows * 4);
+    const treeHeight = rowCount * (nodeH + localRowGap + 4);
+    treeLayouts.push({ fn, minLane, maxLane, treeWidth, treeHeight, localRowGap });
   });
 
   let cursorX = margin;
@@ -1193,7 +1445,7 @@ function renderFlowSvg(script){
 
     fn.graph.nodes.forEach(node => {
       const px = x + (node.lane || 0) * laneGap;
-      const py = localY + (node.row || 0) * (nodeH + rowGap);
+      const py = localY + (node.row || 0) * (nodeH + layout.localRowGap);
       positions.set(node.id, { x:px, y:py });
       nodeMap.set(node.id, node);
       maxRight = Math.max(maxRight, px + colW);
@@ -1201,14 +1453,49 @@ function renderFlowSvg(script){
 
     fn._positions = positions;
     fn._nodeMap = nodeMap;
+    fn._edgeMeta = buildNodeEdgeMeta(fn);
 
-    fn.graph.edges.forEach((edge, edgeIndex) => {
+    const sortedEdges = fn.graph.edges.slice().sort((ea, eb) => {
+      const ay = positions.get(ea.from)?.y ?? 0;
+      const by = positions.get(eb.from)?.y ?? 0;
+      if (ay !== by) return ay - by;
+      const aty = positions.get(ea.to)?.y ?? 0;
+      const bty = positions.get(eb.to)?.y ?? 0;
+      return aty - bty;
+    });
+
+    const busBaseX = x + colW + clampSpacing(state.noodleDetour, state.noodleHard) * 1.35;
+    const edgeRecords = [];
+
+    sortedEdges.forEach((edge, edgeIndex) => {
       const fromNode = nodeMap.get(edge.from);
       const toNode = nodeMap.get(edge.to);
-      const a = positions.get(edge.from);
-      const b = positions.get(edge.to);
-      if (!fromNode || !toNode || !a || !b) return;
-      contentEdges += drawOrthogonalEdge(fromNode, toNode, a, b, edge, colW, nodeH, edgeIndex);
+      const fromPos = positions.get(edge.from);
+      const toPos = positions.get(edge.to);
+      if (!fromNode || !toNode || !fromPos || !toPos) return;
+
+      const route = polylinePointsForEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, fn._edgeMeta, edgeIndex, busBaseX);
+      edgeRecords.push({
+        id: `${edge.from}-${edge.to}-${edge.kind}-${edgeIndex}`,
+        edge,
+        fromNode,
+        toNode,
+        fromPos,
+        toPos,
+        ...route
+      });
+    });
+
+    const orthSegments = [];
+    edgeRecords.forEach(rec => {
+      if (state.noodleStyle !== 'soft'){
+        orthSegments.push(...orthogonalSegmentsFromPoints(rec.points, rec.id));
+      }
+    });
+    const intersections = segmentIntersections(orthSegments);
+
+    edgeRecords.forEach(rec => {
+      contentEdges += drawFlowEdgeBundle(rec, intersections.get(rec.id) || []);
     });
 
     fn.graph.nodes.forEach(node => {
@@ -1228,6 +1515,9 @@ function renderFlowSvg(script){
   });
 
   if (state.showCrossLinks){
+    let crossIndex = 0;
+    const outerBaseX = maxRight + state.crossRailGap;
+
     treeLayouts.forEach(layout => {
       const fn = layout.fn;
       fn.graph.crossLinks.forEach(link => {
@@ -1235,21 +1525,26 @@ function renderFlowSvg(script){
         const fromNode = fn._nodeMap.get(link.from);
         const targetAnchor = functionAnchors.get(link.toFunction);
         if (!fromPos || !fromNode || !targetAnchor) return;
-        const start = portFor(fromNode, fromPos, colW, nodeH, 'right');
+
+        const start = portFor(fromPos, colW, nodeH, 'right', 0, 1);
         const end = { x: targetAnchor.x, y: targetAnchor.y + 18 };
-        maxRight = Math.max(maxRight, start.x, end.x);
-        contentCross += drawCrossLink(start.x, start.y, end.x, end.y, link.toFunction);
+        const railX = outerBaseX + crossIndex * state.busLaneSpacing;
+
+        maxRight = Math.max(maxRight, railX, start.x, end.x);
+        contentCross += drawCrossLink(start.x, start.y, end.x, end.y, link.toFunction, '#7eb5ff', railX);
+        crossIndex += 1;
       });
     });
   }
 
   const maxBottom = Math.max(...treeLayouts.map(layout => layout.baseY + layout.treeHeight), margin + 600);
-  const width = Math.max(1900, maxRight + margin + 180);
+  const width = Math.max(2100, maxRight + margin + 180);
   const height = maxBottom + 120;
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <defs>
+        ${drawArrowMarkerDefs()}
         <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.28" />
         </filter>
@@ -1262,28 +1557,33 @@ function renderFlowSvg(script){
 }
 
 function renderCallGraphSvg(script){
-  const width = 1320;
+  const width = 1520;
   const margin = 40;
   const colW = 220;
-  const rowH = 100;
-  const cols = Math.max(1, Math.floor((width - margin*2) / (colW + 40)));
+  const rowH = 110;
+  const cols = Math.max(1, Math.floor((width - margin*2) / (colW + 60)));
   const positions = new Map();
   let content = `<text x="${margin}" y="30" font-size="22" font-weight="700" fill="#f1f3f5">${escapeXml(script.name)} — function call graph</text>`;
 
   script.functions.forEach((fn,i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
-    const x = margin + col * (colW + 40);
+    const x = margin + col * (colW + 60);
     const y = 60 + row * rowH;
     positions.set(fn.name,{x,y});
   });
+
+  let crossIndex = 0;
+  const outerRailBase = width - 180;
 
   script.functions.forEach(fn => {
     const a = positions.get(fn.name);
     fn.calls.forEach(target => {
       const b = positions.get(target);
       if (!a || !b) return;
-      content += drawCrossLink(a.x + colW, a.y + 28, b.x, b.y + 28, 'calls', '#7eb5ff');
+      const railX = outerRailBase + (crossIndex % 4) * 24;
+      content += drawCrossLink(a.x + colW, a.y + 28, b.x, b.y + 28, 'calls', '#7eb5ff', railX);
+      crossIndex += 1;
     });
   });
 
@@ -1299,7 +1599,13 @@ function renderCallGraphSvg(script){
   const rows = Math.ceil(Math.max(1, script.functions.length) / cols);
   const height = Math.max(260, 80 + rows * rowH + 60);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#16181b" />${content}</svg>`;
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <defs>${drawArrowMarkerDefs()}</defs>
+      <rect width="100%" height="100%" fill="#16181b" />
+      ${content}
+    </svg>
+  `;
 }
 
 function getSelectedScript(){
@@ -1326,10 +1632,14 @@ function updateReadouts(){
 
   els.noodleDetourValue.textContent = state.noodleDetour;
   els.noodleHardValue.textContent = state.noodleHard;
+  els.roundnessValue.textContent = state.roundness;
   els.noodleSeparationValue.textContent = state.noodleSeparation;
   els.lineThicknessValue.textContent = Number(state.lineThickness).toFixed(1);
   els.portSizeValue.textContent = state.portSize;
-  els.crossLiftValue.textContent = state.crossLift;
+  els.bridgeHeightValue.textContent = state.bridgeHeight;
+  els.arrowSizeValue.textContent = state.arrowSize;
+  els.busLaneSpacingValue.textContent = state.busLaneSpacing;
+  els.crossRailGapValue.textContent = state.crossRailGap;
 
   els.boxWidthValue.textContent = state.boxWidth;
   els.boxHeightValue.textContent = state.boxHeight;
@@ -1520,10 +1830,14 @@ bindRange(els.treeSpacingRange, 'treeSpacing');
 bindRange(els.treeSpacingHardRange, 'treeSpacingHard');
 bindRange(els.noodleDetourRange, 'noodleDetour');
 bindRange(els.noodleHardRange, 'noodleHard');
+bindRange(els.roundnessRange, 'roundness');
 bindRange(els.noodleSeparationRange, 'noodleSeparation');
 bindRange(els.lineThicknessRange, 'lineThickness', parseFloat);
 bindRange(els.portSizeRange, 'portSize');
-bindRange(els.crossLiftRange, 'crossLift');
+bindRange(els.bridgeHeightRange, 'bridgeHeight');
+bindRange(els.arrowSizeRange, 'arrowSize');
+bindRange(els.busLaneSpacingRange, 'busLaneSpacing');
+bindRange(els.crossRailGapRange, 'crossRailGap');
 bindRange(els.boxWidthRange, 'boxWidth');
 bindRange(els.boxHeightRange, 'boxHeight');
 
@@ -1532,6 +1846,8 @@ els.mergeCheckbox.addEventListener('change', e => { state.showMergeNodes = e.tar
 els.crossLinksCheckbox.addEventListener('change', e => { state.showCrossLinks = e.target.checked; render(); });
 els.portsCheckbox.addEventListener('change', e => { state.showPorts = e.target.checked; render(); });
 els.outlinesCheckbox.addEventListener('change', e => { state.showOutlines = e.target.checked; render(); });
+els.arrowsCheckbox.addEventListener('change', e => { state.showArrows = e.target.checked; render(); });
+els.bridgesCheckbox.addEventListener('change', e => { state.showBridges = e.target.checked; render(); });
 
 function isFileDragEvent(e){
   const types = e.dataTransfer?.types;
