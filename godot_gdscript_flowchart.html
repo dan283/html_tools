@@ -3,6 +3,188 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GDScript Flow Visualizer V8</title>
+  <style>
+    :root{--bg:#1e1f22;--panel:#2a2d31;--panel2:#32363b;--line:#454b53;--text:#f1f3f5;--muted:#aab2bd;--accent:#f08c2b;--good:#58c27d;--warn:#ffd166;--bad:#ff6b6b;--info:#7eb5ff;--merge:#b7c0ca;--shadow:0 18px 40px rgba(0,0,0,.25);--radius:18px}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;font:14px/1.45 Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#1b1c1f,#151618 65%);color:var(--text)}
+    .app{display:grid;grid-template-columns:390px 1fr;min-height:100vh;gap:16px;padding:16px}
+    .panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .sidebar{display:flex;flex-direction:column;min-height:0}.section{padding:16px;border-bottom:1px solid rgba(255,255,255,.06)}.section:last-child{border-bottom:0}
+    h1{margin:0 0 6px;font-size:22px;line-height:1.2}h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}p{margin:0 0 10px;color:var(--muted)}
+    .controls,.stack{display:grid;gap:10px}.row{display:flex;gap:10px;flex-wrap:wrap}
+    button,label.file-btn,select,input[type="range"]{appearance:none;border:1px solid rgba(255,255,255,.09);background:#3a3f46;color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.18s ease;font:inherit}
+    input[type="range"]{padding:8px 10px} button:hover,label.file-btn:hover,select:hover{border-color:rgba(255,255,255,.18);transform:translateY(-1px)}
+    button.primary,label.file-btn.primary{background:linear-gradient(180deg,var(--accent),#d77820);color:#1f1305;border-color:#00000022;font-weight:700} button.ghost{background:#2f3338}
+    input[type="file"]{display:none}
+    .note,.toggle-box,.legend-box{font-size:12px;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:10px 12px}
+    .toggle-row{display:flex;align-items:center;gap:10px;color:var(--text)} .toggle-row input{accent-color:#f08c2b}.range-label{display:flex;justify-content:space-between;gap:10px}.range-label span:last-child{color:#fff}
+    .legend-box{display:grid;gap:8px}.legend-item{display:flex;gap:10px;align-items:flex-start}.swatch{width:14px;height:14px;border-radius:999px;flex:0 0 auto;margin-top:2px;border:1px solid rgba(255,255,255,.2)}
+    .script-list{display:grid;gap:8px;max-height:240px;overflow:auto;padding-right:2px}.script-item{border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);border-radius:14px;padding:10px 12px;cursor:pointer}.script-item.active{border-color:rgba(240,140,43,.45);background:rgba(240,140,43,.10)}.script-name{font-weight:700}.script-meta{font-size:12px;color:var(--muted);margin-top:3px}
+    .main{display:flex;flex-direction:column;min-height:0}.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap}.toolbar-left,.toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.title-wrap{display:flex;flex-direction:column;gap:2px}.title-wrap strong{font-size:16px}.title-wrap span{color:var(--muted);font-size:12px}
+    .canvas-wrap{position:relative;flex:1;min-height:0;background:radial-gradient(circle at 20% 10%, rgba(240,140,43,.08), transparent 28%),linear-gradient(180deg,#1a1c1f,#151618 70%);overflow:auto}
+    .canvas{min-height:100%;padding:22px;width:max-content;min-width:100%}
+    .svg-host{display:inline-block;width:max-content;min-width:max-content}
+    .svg-host svg{display:block}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);color:var(--muted);font-size:12px}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);padding:7px 10px;border-radius:999px}.dot{width:10px;height:10px;border-radius:50%}
+    .empty{display:grid;place-items:center;min-height:420px;border:1px dashed rgba(255,255,255,.10);border-radius:20px;color:var(--muted);background:rgba(255,255,255,.02);text-align:center;padding:20px}.error{margin-top:10px;padding:10px 12px;border-radius:12px;color:#ffd7d7;background:rgba(255,107,107,.10);border:1px solid rgba(255,107,107,.25);white-space:pre-wrap}
+    svg text{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+    @media (max-width:980px){.app{grid-template-columns:1fr}.sidebar{order:2}.main{order:1;min-height:60vh}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel sidebar">
+    <div class="section">
+      <h1>GDScript Flow Visualizer</h1>
+      <p>Import one or more <strong>.gd</strong> files and turn functions plus control flow into a readable diagram.</p>
+      <div class="controls">
+        <div class="row"><label class="file-btn primary">Import .gd files<input id="fileInput" type="file" accept=".gd,text/plain" multiple /></label><button id="loadDemoBtn" class="ghost">Load demo</button></div>
+        <div class="row"><button id="exportSvgBtn">Export SVG</button><button id="exportPngBtn">Export PNG</button><button id="exportPdfBtn">Export PDF</button><button id="clearBtn">Clear</button></div>
+      </div>
+      <div class="note" style="margin-top:12px">Horizontal scrolling is forced on when the SVG is wider than the panel. PDF export now opens a print-safe document scaled to page instead of printing the app UI.</div>
+      <div id="errorBox" class="error" hidden></div>
+    </div>
+
+    <div class="section">
+      <h2>View</h2>
+      <div class="controls">
+        <label>Diagram mode</label>
+        <select id="modeSelect"><option value="flow">Flow chart</option><option value="calls">Call graph</option></select>
+        <div class="stack"><label class="range-label"><span>Font size</span><span id="fontSizeValue">13</span></label><input id="fontSizeRange" type="range" min="11" max="20" value="13" /></div>
+        <div class="stack"><label class="range-label"><span>Vertical spacing</span><span id="vSpacingValue">22</span></label><input id="vSpacingRange" type="range" min="2" max="70" value="22" /></div>
+        <div class="stack"><label class="range-label"><span>Horizontal spacing</span><span id="hSpacingValue">180</span></label><input id="hSpacingRange" type="range" min="80" max="520" value="180" /></div>
+        <div class="stack"><label class="range-label"><span>Tree spacing</span><span id="treeSpacingValue">140</span></label><input id="treeSpacingRange" type="range" min="40" max="520" value="140" /></div>
+        <div class="stack"><label class="range-label"><span>Tree spacing min</span><span id="treeSpacingMinValue">40</span></label><input id="treeSpacingMinRange" type="range" min="0" max="400" value="40" /></div>
+        <div class="stack"><label class="range-label"><span>Tree spacing max</span><span id="treeSpacingMaxValue">520</span></label><input id="treeSpacingMaxRange" type="range" min="120" max="1600" value="520" /></div>
+        <div class="stack"><label class="range-label"><span>Box width</span><span id="boxWidthValue">290</span></label><input id="boxWidthRange" type="range" min="220" max="460" value="290" /></div>
+        <div class="stack"><label class="range-label"><span>Box height</span><span id="boxHeightValue">56</span></label><input id="boxHeightRange" type="range" min="28" max="140" value="56" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Options</h2>
+      <div class="toggle-box stack">
+        <label class="toggle-row"><input id="squareCheckbox" type="checkbox" /> More squarish boxes</label>
+        <label class="toggle-row"><input id="mergeCheckbox" type="checkbox" checked /> Show merge nodes</label>
+        <label class="toggle-row"><input id="edgeLabelsCheckbox" type="checkbox" checked /> Show yes / no labels</label>
+        <label class="toggle-row"><input id="crossLinksCheckbox" type="checkbox" checked /> Show blue cross-calls</label>
+      </div>
+    </div>
+
+    <div class="section"><h2>Scripts</h2><div id="scriptList" class="script-list"></div></div>
+  </aside>
+
+  <main class="panel main">
+    <div class="toolbar"><div class="toolbar-left"><div class="title-wrap"><strong id="diagramTitle">No script selected</strong><span id="diagramMeta">Import one or more GDScript files to begin.</span></div></div><div class="toolbar-right"><button id="fitBtn" class="ghost">Fit width</button></div></div>
+    <div class="canvas-wrap" id="canvasWrap"><div class="canvas" id="canvasArea"><div class="empty" id="emptyState"><div><h3 style="margin:0 0 8px;font-size:24px;color:#fff">Drop in your .gd files</h3><div style="max-width:620px">This version fixes horizontal scrolling, avoids cropped SVG/PNG exports by measuring the real content bounds, and exports PDF through a print-safe viewer page.</div></div></div></div></div>
+    <div class="legend"><span class="pill"><span class="dot" style="background:#f08c2b"></span>Function start</span><span class="pill"><span class="dot" style="background:#58c27d"></span>Action</span><span class="pill"><span class="dot" style="background:#ffd166"></span>Condition</span><span class="pill"><span class="dot" style="background:#7eb5ff"></span>Blue cross-call</span><span class="pill"><span class="dot" style="background:#ff6b6b"></span>Return</span><span class="pill"><span class="dot" style="background:#b7c0ca"></span>Merge / end</span></div>
+  </main>
+</div>
+
+<script>
+const state = { files: [], selectedId: null, fontSize: 13, vSpacing: 22, hSpacing: 180, treeSpacing: 140, treeSpacingMin: 40, treeSpacingMax: 520, boxWidth: 290, boxHeight: 56, squareBoxes: false, showMergeNodes: true, showEdgeLabels: true, showCrossLinks: true, mode: 'flow' };
+const els = { fileInput:fileInput, loadDemoBtn:loadDemoBtn, exportSvgBtn:exportSvgBtn, exportPngBtn:exportPngBtn, exportPdfBtn:exportPdfBtn, clearBtn:clearBtn, fitBtn:fitBtn, modeSelect:modeSelect, fontSizeRange:fontSizeRange, vSpacingRange:vSpacingRange, hSpacingRange:hSpacingRange, treeSpacingRange:treeSpacingRange, treeSpacingMinRange:treeSpacingMinRange, treeSpacingMaxRange:treeSpacingMaxRange, boxWidthRange:boxWidthRange, boxHeightRange:boxHeightRange, squareCheckbox:squareCheckbox, mergeCheckbox:mergeCheckbox, edgeLabelsCheckbox:edgeLabelsCheckbox, crossLinksCheckbox:crossLinksCheckbox, fontSizeValue:fontSizeValue, vSpacingValue:vSpacingValue, hSpacingValue:hSpacingValue, treeSpacingValue:treeSpacingValue, treeSpacingMinValue:treeSpacingMinValue, treeSpacingMaxValue:treeSpacingMaxValue, boxWidthValue:boxWidthValue, boxHeightValue:boxHeightValue, scriptList:scriptList, canvasArea:canvasArea, canvasWrap:canvasWrap, diagramTitle:diagramTitle, diagramMeta:diagramMeta, emptyState:emptyState, errorBox:errorBox };
+
+const demoScript = `extends CharacterBody2D
+var target
+func _ready() -> void:
+    target = get_tree().current_scene.get_node_or_null("World/Player")
+    if target == null:
+        return
+func _physics_process(delta: float) -> void:
+    if target != null:
+        target.some_func()
+    elif get_tree().current_scene.has_method("foo"):
+        get_tree().current_scene.foo()
+    else:
+        move_and_slide()
+func some_func() -> void:
+    queue_free()`;
+
+function showError(msg){ els.errorBox.hidden = !msg; els.errorBox.textContent = msg || ''; }
+function escapeXml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
+function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+function downloadBlob(blob, filename){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100); }
+function readFile(file){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result || '')); reader.onerror=()=>reject(reader.error || new Error('Failed to read file')); reader.readAsText(file); }); }
+function indentOf(line){ const m=line.match(/^(\s*)/); return m ? m[1].replace(/\t/g,'    ').length : 0; }
+function parseFunctions(code){ const lines=code.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n'); const funcs=[]; let current=null; function finishCurrent(endIndex){ if (!current) return; current.endLine=endIndex; current.body=lines.slice(current.startLine, endIndex).join('\n'); funcs.push(current); current=null; } for (let i=0;i<lines.length;i++){ const m=lines[i].match(/^\s*func\s+([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)\s*(?:->\s*([^:]+))?\s*:/); if (m){ finishCurrent(i); current={ name:m[1], params:m[2] || '', returns:(m[3] || '').trim(), startLine:i }; } } finishCurrent(lines.length); return funcs; }
+function parseCalls(fn, allFunctionNames){ const local=new Set(); const re=/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g; let m; while ((m=re.exec(fn.body)) !== null){ const name=m[1]; if (allFunctionNames.includes(name) && name !== fn.name) local.add(name); } return [...local]; }
+function extractMemberChains(trimmed){ const matches=[...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))+\s*\(/g)]; return matches.map(m => m[0].replace(/\s*\($/, '()')); }
+function extractCrossTargets(trimmed, functionMap){ const chains=extractMemberChains(trimmed); const targets=[]; chains.forEach(chain => { const parts=chain.replace(/\(\)$/,'').split('.'); const maybeFn=parts[parts.length - 1]; if (functionMap.has(maybeFn)) targets.push(functionMap.get(maybeFn)); }); return targets; }
+function labelWithChains(trimmed, allFunctionNames){ const calls=[...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1]).filter(name => !['if','elif','for','while','match','preload','load','range','print','str','len','min','max','clamp','int','float','bool','Color','Vector2','Vector3'].includes(name)); const ownCalls=calls.filter(c => allFunctionNames.includes(c)); const chains=extractMemberChains(trimmed).slice(0,2); if (chains.length) return `${trimmed.slice(0,78)}  → ${chains.join(', ')}`; if (ownCalls.length) return `${trimmed.slice(0,88)}  → ${ownCalls.join(', ')}`; return trimmed.slice(0,140); }
+
+function parseBranchGraph(fn, allFunctionNames, functionMap){
+  const bodyLines=fn.body.split('\n'); const baseIndent=indentOf(bodyLines[0] || ''); const nodes=[]; const edges=[]; const crossLinks=[]; let seq=1;
+  const nextId=(prefix='n') => `${fn.name}-${prefix}${seq++}`;
+  const addNode=(type,label,line,row,lane,raw='') => { const node={ id:nextId(type === 'merge' ? 'm' : 'n'), type, label, line, row, lane, raw }; nodes.push(node); return node; };
+  const addEdge=(from,to,label='') => edges.push({ from, to, label });
+  const startNode={ id:`${fn.name}-start`, type:'start', label:`func ${fn.name}()`, line:fn.startLine + 1, row:0, lane:0, raw:'' }; nodes.push(startNode);
+  function parseBlock(startIndex, parentIndent, rowStart, incomingIds, laneBase){
+    let row=rowStart, tails=[...incomingIds], i=startIndex;
+    while (i < bodyLines.length){
+      const raw=bodyLines[i], trimmed=raw.trim(), indent=indentOf(raw), lineNo=fn.startLine + i + 1;
+      if (!trimmed || trimmed.startsWith('#')) { i += 1; continue; }
+      if (indent <= parentIndent) break;
+      const ifMatch=trimmed.match(/^if\s+(.+):$/), returnMatch=trimmed.match(/^return\b\s*(.*)$/), forMatch=trimmed.match(/^for\s+(.+):$/), whileMatch=trimmed.match(/^while\s+(.+):$/), matchMatch=trimmed.match(/^match\s+(.+):$/);
+      if (ifMatch){
+        row += 1; const cond=addNode('condition', `if ${ifMatch[1]}`.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, cond.id, ''));
+        const branches=[]; const ifResult=parseBlock(i + 1, indent, row, [cond.id], laneBase + 1); branches.push({ tails:ifResult.tails, index:ifResult.index });
+        let j=ifResult.index, extra=2;
+        while (j < bodyLines.length){ const t=bodyLines[j].trim(), ind=indentOf(bodyLines[j]); if (ind !== indent) break; const elifMatch=t.match(/^elif\s+(.+):$/), elseMatch=/^else\s*:\s*$/.test(t); if (!elifMatch && !elseMatch) break; row += 1; if (elifMatch){ const elifNode=addNode('condition', `elif ${elifMatch[1]}`.slice(0,140), fn.startLine + j + 1, row, laneBase + extra - 1, t); addEdge(cond.id, elifNode.id, state.showEdgeLabels ? 'no' : ''); const elifResult=parseBlock(j + 1, indent, row, [elifNode.id], laneBase + extra); branches.push({ tails:elifResult.tails, index:elifResult.index }); j=elifResult.index; extra += 1; continue; } if (elseMatch){ const elseNode=addNode('condition', 'else', fn.startLine + j + 1, row, laneBase + extra - 1, t); addEdge(cond.id, elseNode.id, state.showEdgeLabels ? 'no' : ''); const elseResult=parseBlock(j + 1, indent, row, [elseNode.id], laneBase + extra); branches.push({ tails:elseResult.tails, index:elseResult.index }); j=elseResult.index; extra += 1; continue; } }
+        if (branches[0]?.tails[0]) addEdge(cond.id, branches[0].tails[0], state.showEdgeLabels ? 'yes' : '');
+        let merged=branches.flatMap(b => b.tails); if (state.showMergeNodes && merged.length > 1){ row += 1; const merge=addNode('merge', 'merge', lineNo, row, laneBase, 'merge'); merged.forEach(t => addEdge(t, merge.id, 'merge')); merged=[merge.id]; }
+        tails=merged; i=j; continue;
+      }
+      if (forMatch || whileMatch || matchMatch){ row += 1; const label=forMatch ? `for ${forMatch[1]}` : whileMatch ? `while ${whileMatch[1]}` : `match ${matchMatch[1]}`; const node=addNode('condition', label.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); tails=[node.id]; i += 1; continue; }
+      if (returnMatch){ row += 1; const node=addNode('return', trimmed.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); tails=[node.id]; i += 1; continue; }
+      row += 1; const chains=extractMemberChains(trimmed); const type=chains.length ? 'signal' : /\.emit\s*\(/.test(trimmed) ? 'signal' : 'action'; const node=addNode(type, labelWithChains(trimmed, allFunctionNames), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); if (state.showCrossLinks){ extractCrossTargets(trimmed, functionMap).forEach(targetName => crossLinks.push({ from:node.id, toFunction:targetName })); } tails=[node.id]; i += 1;
+    }
+    return { tails, index:i, row };
+  }
+  const result=parseBlock(1, baseIndent, 0, [startNode.id], 0); const endNode={ id:`${fn.name}-end`, type:'end', label:`end ${fn.name}`, line:fn.endLine, row:result.row + 1, lane:0, raw:'' }; nodes.push(endNode); result.tails.forEach(t => addEdge(t, endNode.id, '')); return { nodes, edges, crossLinks };
+}
+
+function analyzeScript(name, code){ const functions=parseFunctions(code), functionNames=functions.map(f=>f.name), functionMap=new Map(functionNames.map(n => [n,n])); const flows=functions.map(fn => ({ ...fn, graph:parseBranchGraph(fn, functionNames, functionMap), calls:parseCalls(fn, functionNames) })); return { id:slug(name + '-' + Math.random().toString(36).slice(2,7)), name, code, lines:code.split(/\r?\n/).length, functions:flows }; }
+function roundedRect(x,y,w,h,r,fill,stroke,strokeWidth=1){ return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`; }
+function wrapTextByBox(label, boxWidth, boxHeight, fontSize){ const charsPerLine=Math.max(10, Math.floor((boxWidth - 30) / (fontSize * 0.56))); const maxLines=Math.max(1, Math.floor((boxHeight - 14) / (fontSize + 4))); const words=String(label).split(/\s+/); const lines=[]; let current=''; for (const word of words){ const test=current ? `${current} ${word}` : word; if (test.length <= charsPerLine){ current=test; } else { if (current) lines.push(current); current=word; if (lines.length >= maxLines - 1) break; } } if (lines.length < maxLines && current) lines.push(current); const used=lines.join(' ').split(/\s+/).filter(Boolean).length; if (used < words.length && lines.length) lines[lines.length - 1] = lines[lines.length - 1].replace(/\s*$/, '…'); return lines.slice(0, maxLines); }
+function drawArrow(x1,y1,x2,y2,label='',color='#74808d',width=2){ const mx=(x1 + x2) / 2, my=(y1 + y2) / 2; return `<path d="M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${width}" /><polygon points="${x2},${y2} ${x2-8},${y2-5} ${x2-8},${y2+5}" fill="${color}" />${label ? `<text x="${mx + 8}" y="${my - 6}" font-size="11" fill="${color}">${escapeXml(label)}</text>` : ''}`; }
+function nodePalette(type){ switch(type){ case 'start': return {fill:'#f08c2b', stroke:'#f6b06a', text:'#1c1204'}; case 'end': return {fill:'#2a2d31', stroke:'#b7c0ca', text:'#f1f3f5'}; case 'merge': return {fill:'#3e434c', stroke:'#b7c0ca', text:'#f1f3f5'}; case 'condition': return {fill:'#5b4a16', stroke:'#ffd166', text:'#fff0c2'}; case 'return': return {fill:'#5a2121', stroke:'#ff8a8a', text:'#ffe1e1'}; case 'signal': return {fill:'#263f68', stroke:'#7eb5ff', text:'#e6f1ff'}; default: return {fill:'#1f4a33', stroke:'#58c27d', text:'#e9fff1'}; } }
+
+function renderFlowSvg(script){
+  const fontSize=state.fontSize, margin=30, baseTreeGap=state.treeSpacing + (state.showCrossLinks ? 100 : 0), laneGap=Math.max(70, state.hSpacing * 0.82), colW=state.boxWidth, nodeH=state.boxHeight, boxRadius=state.squareBoxes ? 8 : 16;
+  let content='', y=margin, maxRight=0; const functionAnchors=new Map(); const treeLayouts=[]; const rowMaxWidth=4200;
+  script.functions.forEach(fn => { const lanes=fn.graph.nodes.map(n => n.lane || 0); const maxLane=lanes.length ? Math.max(...lanes) : 0; const minLane=lanes.length ? Math.min(...lanes) : 0; const laneSpan=maxLane - minLane; const treeWidth=colW + laneSpan * laneGap; const treeHeight=(Math.max(0, ...fn.graph.nodes.map(n => n.row || 0)) + 1) * (nodeH + state.vSpacing); treeLayouts.push({ fn, minLane, maxLane, treeWidth, treeHeight }); });
+  let cursorX=margin, currentRowHeight=0;
+  treeLayouts.forEach((layout, idx) => { if (idx > 0 && cursorX + layout.treeWidth + margin > rowMaxWidth){ cursorX=margin; y += currentRowHeight + 120; currentRowHeight=0; } layout.baseX=cursorX - layout.minLane * laneGap; layout.baseY=y + 34; cursorX += layout.treeWidth + baseTreeGap; currentRowHeight=Math.max(currentRowHeight, layout.treeHeight); maxRight=Math.max(maxRight, layout.baseX + layout.treeWidth); });
+  treeLayouts.forEach(layout => { const fn=layout.fn, x=layout.baseX, localY=layout.baseY, positions=new Map(); functionAnchors.set(fn.name, { x, y:localY, layout }); content += `<text x="${x}" y="${localY - 34}" font-size="18" font-weight="700" fill="#f1f3f5">${escapeXml(fn.name)}()</text>`; content += `<text x="${x}" y="${localY - 16}" font-size="11" fill="#aab2bd">line ${fn.startLine + 1}${fn.returns ? ' → ' + escapeXml(fn.returns) : ''}</text>`; fn.graph.nodes.forEach(node => { const px=x + (node.lane || 0) * laneGap, py=localY + (node.row || 0) * (nodeH + state.vSpacing); positions.set(node.id, { x:px, y:py }); maxRight=Math.max(maxRight, px + colW); }); fn._positions=positions; fn.graph.edges.forEach(edge => { const a=positions.get(edge.from), b=positions.get(edge.to); if (!a || !b) return; const showLabel=state.showEdgeLabels || edge.label === 'merge'; content += drawArrow(a.x + colW/2, a.y + nodeH, b.x + colW/2, b.y, showLabel ? edge.label : ''); }); fn.graph.nodes.forEach(node => { const p=positions.get(node.id), pal=nodePalette(node.type); content += roundedRect(p.x,p.y,colW,nodeH,boxRadius,pal.fill,pal.stroke,1.4); const lines=wrapTextByBox(node.label, colW, nodeH, fontSize); lines.forEach((line, idx) => { const yPos=p.y + 20 + idx * (fontSize + 4); content += `<text x="${p.x + 14}" y="${yPos}" font-size="${idx === 0 ? fontSize : Math.max(10,fontSize - 1)}" font-weight="${idx === 0 ? 700 : 500}" fill="${pal.text}" opacity="${idx === 0 ? 1 : 0.92}">${escapeXml(line)}</text>`; }); content += `<text x="${p.x + colW - 46}" y="${p.y + 20}" font-size="10" fill="${pal.text}" opacity="0.82">L${node.line ?? ''}</text>`; }); });
+  if (state.showCrossLinks){ treeLayouts.forEach(layout => { const fn=layout.fn; fn.graph.crossLinks.forEach(link => { const fromPos=fn._positions.get(link.from), targetAnchor=functionAnchors.get(link.toFunction); if (!fromPos || !targetAnchor) return; const x1=fromPos.x + colW, y1=fromPos.y + nodeH/2, x2=targetAnchor.x, y2=targetAnchor.y + 18; maxRight=Math.max(maxRight, x1, x2); content += drawArrow(x1, y1, x2, y2, link.toFunction, '#7eb5ff', 2.5); }); }); }
+  const maxBottom=Math.max(...treeLayouts.map(layout => layout.baseY + layout.treeHeight), margin + 600); const width=Math.max(1800, maxRight + margin + 120); const height=maxBottom + 120; return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.28" /></filter></defs><rect width="100%" height="100%" fill="#16181b" /><g filter="url(#shadow)">${content}</g></svg>`;
+}
+function renderCallGraphSvg(script){ const width=1320, margin=40, colW=220, rowH=100, cols=Math.max(1, Math.floor((width - margin*2) / (colW + 40))); const positions=new Map(); let content=`<text x="${margin}" y="30" font-size="22" font-weight="700" fill="#f1f3f5">${escapeXml(script.name)} — function call graph</text>`; script.functions.forEach((fn,i) => { const col=i % cols, row=Math.floor(i / cols), x=margin + col * (colW + 40), y=60 + row * rowH; positions.set(fn.name,{x,y}); }); script.functions.forEach(fn => { const a=positions.get(fn.name); fn.calls.forEach(target => { const b=positions.get(target); if (!a || !b) return; content += drawArrow(a.x + colW/2, a.y + 54, b.x + colW/2, b.y, 'calls'); }); }); script.functions.forEach(fn => { const p=positions.get(fn.name), fill=fn.name.startsWith('_') ? '#5b4a16' : '#1f4a33', stroke=fn.name.startsWith('_') ? '#ffd166' : '#58c27d'; content += roundedRect(p.x,p.y,colW,56,state.squareBoxes ? 8 : 16,fill,stroke,1.5); content += `<text x="${p.x + 14}" y="${p.y + 23}" font-size="15" font-weight="700" fill="#f5f7fa">${escapeXml(fn.name)}()</text>`; content += `<text x="${p.x + 14}" y="${p.y + 40}" font-size="11" fill="#d5dde7">${fn.calls.length} outgoing call${fn.calls.length === 1 ? '' : 's'}</text>`; }); const rows=Math.ceil(Math.max(1, script.functions.length) / cols), height=Math.max(260, 80 + rows * rowH + 60); return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#16181b" />${content}</svg>`; }
+
+function getSelectedScript(){ return state.files.find(f => f.id === state.selectedId) || null; }
+function currentSvgString(){ const script=getSelectedScript(); if (!script) return ''; return state.mode === 'calls' ? renderCallGraphSvg(script) : renderFlowSvg(script); }
+function updateReadouts(){ els.fontSizeValue.textContent=state.fontSize; els.vSpacingValue.textContent=state.vSpacing; els.hSpacingValue.textContent=state.hSpacing; els.treeSpacingValue.textContent=state.treeSpacing; els.treeSpacingMinValue.textContent=state.treeSpacingMin; els.treeSpacingMaxValue.textContent=state.treeSpacingMax; els.boxWidthValue.textContent=state.boxWidth; els.boxHeightValue.textContent=state.boxHeight; }
+function renderScriptList(){ els.scriptList.innerHTML=''; if (!state.files.length){ els.scriptList.innerHTML='<div class="hint">No imported scripts yet.</div>'; return; } state.files.forEach(file => { const item=document.createElement('div'); item.className='script-item' + (file.id === state.selectedId ? ' active' : ''); item.innerHTML=`<div class="script-name">${escapeXml(file.name)}</div><div class="script-meta">${file.lines} lines • ${file.functions.length} function${file.functions.length === 1 ? '' : 's'}</div>`; item.addEventListener('click', ()=>{ state.selectedId=file.id; render(); }); els.scriptList.appendChild(item); }); }
+function render(){ const script=getSelectedScript(); updateReadouts(); renderScriptList(); if (!script){ els.diagramTitle.textContent='No script selected'; els.diagramMeta.textContent='Import one or more GDScript files to begin.'; els.canvasArea.innerHTML=''; els.canvasArea.appendChild(els.emptyState); return; } els.diagramTitle.textContent=script.name; els.diagramMeta.textContent=`${script.lines} lines • ${script.functions.length} function${script.functions.length === 1 ? '' : 's'} • ${state.mode === 'calls' ? 'call graph' : 'flow chart'}`; const svg=currentSvgString(); els.canvasArea.innerHTML=`<div class="svg-host">${svg}</div>`; }
+async function importFiles(fileList){ showError(''); const incoming=Array.from(fileList || []); if (!incoming.length) return; const results=[]; for (const file of incoming){ try{ const code=await readFile(file); results.push(analyzeScript(file.name, code)); }catch(err){ showError(`Could not read ${file.name}: ${err.message || err}`); } } state.files=[...state.files, ...results]; if (!state.selectedId && state.files[0]) state.selectedId=state.files[0].id; if (results[0]) state.selectedId=results[0].id; render(); }
+function exportSvg(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; downloadBlob(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), `${script.name.replace(/\.gd$/i,'')}-${state.mode}.svg`); }
+function exportPng(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; const img=new Image(), blob=new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob); img.onload=()=>{ const root=new DOMParser().parseFromString(svg,'image/svg+xml').documentElement, w=Number(root.getAttribute('width')) || 1320, h=Number(root.getAttribute('height')) || 900; const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0); canvas.toBlob((pngBlob)=>{ if (pngBlob) downloadBlob(pngBlob, `${script.name.replace(/\.gd$/i,'')}-${state.mode}.png`); URL.revokeObjectURL(url); }, 'image/png'); }; img.onerror=()=>{ showError('PNG export failed.'); URL.revokeObjectURL(url); }; img.src=url; }
+function exportPdf(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; const blob=new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob); const img=new Image(); img.onload=()=>{ const root=new DOMParser().parseFromString(svg,'image/svg+xml').documentElement, w=Number(root.getAttribute('width')) || 1320, h=Number(root.getAttribute('height')) || 900; const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0); const pngUrl=canvas.toDataURL('image/png'); const win=window.open('', '_blank'); if (!win){ showError('Popup blocked. Allow popups for PDF export.'); URL.revokeObjectURL(url); return; } win.document.write(`<!doctype html><html><head><title>${script.name}</title><style>@page{size:auto;margin:10mm}html,body{margin:0;padding:0;background:#fff}img{display:block;width:100%;height:auto;page-break-inside:avoid}</style></head><body><img src="${pngUrl}" alt="diagram" /><script>window.onload=()=>setTimeout(()=>window.print(),150);<\/script></body></html>`); win.document.close(); URL.revokeObjectURL(url); }; img.onerror=()=>{ showError('PDF export failed.'); URL.revokeObjectURL(url); }; img.src=url; }
+function fitWidth(){ const svg=els.canvasArea.querySelector('svg'); if (!svg) return; svg.style.width='100%'; svg.style.height='auto'; }
+function clearAll(){ state.files=[]; state.selectedId=null; showError(''); render(); }
+
+els.fileInput.addEventListener('change', e => importFiles(e.target.files)); els.loadDemoBtn.addEventListener('click', ()=>{ const demo=analyzeScript('demo_player.gd', demoScript); state.files=[demo, ...state.files]; state.selectedId=demo.id; render(); }); els.exportSvgBtn.addEventListener('click', exportSvg); els.exportPngBtn.addEventListener('click', exportPng); els.exportPdfBtn.addEventListener('click', exportPdf); els.clearBtn.addEventListener('click', clearAll); els.fitBtn.addEventListener('click', fitWidth);
+els.modeSelect.addEventListener('change', e => { state.mode=e.target.value; render(); }); els.fontSizeRange.addEventListener('input', e => { state.fontSize=Number(e.target.value); render(); }); els.vSpacingRange.addEventListener('input', e => { state.vSpacing=Number(e.target.value); render(); }); els.hSpacingRange.addEventListener('input', e => { state.hSpacing=Number(e.target.value); render(); }); els.treeSpacingRange.addEventListener('input', e => { state.treeSpacing=Number(e.target.value); render(); }); els.treeSpacingMinRange.addEventListener('input', e => { state.treeSpacingMin=Number(e.target.value); if (state.treeSpacingMax < state.treeSpacingMin + 10){ state.treeSpacingMax=state.treeSpacingMin + 10; els.treeSpacingMaxRange.value=String(state.treeSpacingMax); } els.treeSpacingRange.min=String(state.treeSpacingMin); els.treeSpacingRange.max=String(state.treeSpacingMax); if (state.treeSpacing < state.treeSpacingMin){ state.treeSpacing=state.treeSpacingMin; els.treeSpacingRange.value=String(state.treeSpacing); } render(); }); els.treeSpacingMaxRange.addEventListener('input', e => { state.treeSpacingMax=Number(e.target.value); if (state.treeSpacingMax <= state.treeSpacingMin){ state.treeSpacingMin=Math.max(0, state.treeSpacingMax - 10); els.treeSpacingMinRange.value=String(state.treeSpacingMin); } els.treeSpacingRange.min=String(state.treeSpacingMin); els.treeSpacingRange.max=String(state.treeSpacingMax); if (state.treeSpacing > state.treeSpacingMax){ state.treeSpacing=state.treeSpacingMax; els.treeSpacingRange.value=String(state.treeSpacing); } render(); }); els.boxWidthRange.addEventListener('input', e => { state.boxWidth=Number(e.target.value); render(); }); els.boxHeightRange.addEventListener('input', e => { state.boxHeight=Number(e.target.value); render(); }); els.squareCheckbox.addEventListener('change', e => { state.squareBoxes=e.target.checked; render(); }); els.mergeCheckbox.addEventListener('change', e => { state.showMergeNodes=e.target.checked; render(); }); els.edgeLabelsCheckbox.addEventListener('change', e => { state.showEdgeLabels=e.target.checked; render(); }); els.crossLinksCheckbox.addEventListener('change', e => { state.showCrossLinks=e.target.checked; render(); }); ['dragenter','dragover'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); document.body.style.outline='2px solid rgba(240,140,43,.65)'; })); ['dragleave','drop'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); document.body.style.outline='none'; })); window.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) importFiles(e.dataTransfer.files); }); els.treeSpacingRange.min=String(state.treeSpacingMin); els.treeSpacingRange.max=String(state.treeSpacingMax); render();
+</script>
+</body>
+</html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>GDScript Flow Visualizer V7</title>
   <style>
     :root{--bg:#1e1f22;--panel:#2a2d31;--panel2:#32363b;--text:#f1f3f5;--muted:#aab2bd;--accent:#f08c2b;--good:#58c27d;--warn:#ffd166;--bad:#ff6b6b;--info:#7eb5ff;--merge:#b7c0ca;--shadow:0 18px 40px rgba(0,0,0,.25);--radius:18px}
