@@ -3,213 +3,225 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GDScript Flow Visualizer V8</title>
+  <title>GDScript Flow Visualizer V10</title>
   <style>
-    :root{--bg:#1e1f22;--panel:#2a2d31;--panel2:#32363b;--line:#454b53;--text:#f1f3f5;--muted:#aab2bd;--accent:#f08c2b;--good:#58c27d;--warn:#ffd166;--bad:#ff6b6b;--info:#7eb5ff;--merge:#b7c0ca;--shadow:0 18px 40px rgba(0,0,0,.25);--radius:18px}
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;font:14px/1.45 Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#1b1c1f,#151618 65%);color:var(--text)}
-    .app{display:grid;grid-template-columns:390px 1fr;min-height:100vh;gap:16px;padding:16px}
-    .panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-    .sidebar{display:flex;flex-direction:column;min-height:0}.section{padding:16px;border-bottom:1px solid rgba(255,255,255,.06)}.section:last-child{border-bottom:0}
-    h1{margin:0 0 6px;font-size:22px;line-height:1.2}h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}p{margin:0 0 10px;color:var(--muted)}
-    .controls,.stack{display:grid;gap:10px}.row{display:flex;gap:10px;flex-wrap:wrap}
-    button,label.file-btn,select,input[type="range"]{appearance:none;border:1px solid rgba(255,255,255,.09);background:#3a3f46;color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.18s ease;font:inherit}
-    input[type="range"]{padding:8px 10px} button:hover,label.file-btn:hover,select:hover{border-color:rgba(255,255,255,.18);transform:translateY(-1px)}
-    button.primary,label.file-btn.primary{background:linear-gradient(180deg,var(--accent),#d77820);color:#1f1305;border-color:#00000022;font-weight:700} button.ghost{background:#2f3338}
-    input[type="file"]{display:none}
-    .note,.toggle-box,.legend-box{font-size:12px;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:10px 12px}
-    .toggle-row{display:flex;align-items:center;gap:10px;color:var(--text)} .toggle-row input{accent-color:#f08c2b}.range-label{display:flex;justify-content:space-between;gap:10px}.range-label span:last-child{color:#fff}
-    .legend-box{display:grid;gap:8px}.legend-item{display:flex;gap:10px;align-items:flex-start}.swatch{width:14px;height:14px;border-radius:999px;flex:0 0 auto;margin-top:2px;border:1px solid rgba(255,255,255,.2)}
-    .script-list{display:grid;gap:8px;max-height:240px;overflow:auto;padding-right:2px}.script-item{border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);border-radius:14px;padding:10px 12px;cursor:pointer}.script-item.active{border-color:rgba(240,140,43,.45);background:rgba(240,140,43,.10)}.script-name{font-weight:700}.script-meta{font-size:12px;color:var(--muted);margin-top:3px}
-    .main{display:flex;flex-direction:column;min-height:0}.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap}.toolbar-left,.toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.title-wrap{display:flex;flex-direction:column;gap:2px}.title-wrap strong{font-size:16px}.title-wrap span{color:var(--muted);font-size:12px}
-    .canvas-wrap{position:relative;flex:1;min-height:0;background:radial-gradient(circle at 20% 10%, rgba(240,140,43,.08), transparent 28%),linear-gradient(180deg,#1a1c1f,#151618 70%);overflow:auto}
-    .canvas{min-height:100%;padding:22px;width:max-content;min-width:100%}
-    .svg-host{display:inline-block;width:max-content;min-width:max-content}
-    .svg-host svg{display:block}
-    .legend{display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);color:var(--muted);font-size:12px}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);padding:7px 10px;border-radius:999px}.dot{width:10px;height:10px;border-radius:50%}
-    .empty{display:grid;place-items:center;min-height:420px;border:1px dashed rgba(255,255,255,.10);border-radius:20px;color:var(--muted);background:rgba(255,255,255,.02);text-align:center;padding:20px}.error{margin-top:10px;padding:10px 12px;border-radius:12px;color:#ffd7d7;background:rgba(255,107,107,.10);border:1px solid rgba(255,107,107,.25);white-space:pre-wrap}
-    svg text{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
-    @media (max-width:980px){.app{grid-template-columns:1fr}.sidebar{order:2}.main{order:1;min-height:60vh}}
-  </style>
-</head>
-<body>
-<div class="app">
-  <aside class="panel sidebar">
-    <div class="section">
-      <h1>GDScript Flow Visualizer</h1>
-      <p>Import one or more <strong>.gd</strong> files and turn functions plus control flow into a readable diagram.</p>
-      <div class="controls">
-        <div class="row"><label class="file-btn primary">Import .gd files<input id="fileInput" type="file" accept=".gd,text/plain" multiple /></label><button id="loadDemoBtn" class="ghost">Load demo</button></div>
-        <div class="row"><button id="exportSvgBtn">Export SVG</button><button id="exportPngBtn">Export PNG</button><button id="exportPdfBtn">Export PDF</button><button id="clearBtn">Clear</button></div>
-      </div>
-      <div class="note" style="margin-top:12px">Horizontal scrolling is forced on when the SVG is wider than the panel. PDF export now opens a print-safe document scaled to page instead of printing the app UI.</div>
-      <div id="errorBox" class="error" hidden></div>
-    </div>
-
-    <div class="section">
-      <h2>View</h2>
-      <div class="controls">
-        <label>Diagram mode</label>
-        <select id="modeSelect"><option value="flow">Flow chart</option><option value="calls">Call graph</option></select>
-        <div class="stack"><label class="range-label"><span>Font size</span><span id="fontSizeValue">13</span></label><input id="fontSizeRange" type="range" min="11" max="20" value="13" /></div>
-        <div class="stack"><label class="range-label"><span>Vertical spacing</span><span id="vSpacingValue">22</span></label><input id="vSpacingRange" type="range" min="2" max="70" value="22" /></div>
-        <div class="stack"><label class="range-label"><span>Horizontal spacing</span><span id="hSpacingValue">180</span></label><input id="hSpacingRange" type="range" min="80" max="520" value="180" /></div>
-        <div class="stack"><label class="range-label"><span>Tree spacing</span><span id="treeSpacingValue">140</span></label><input id="treeSpacingRange" type="range" min="40" max="520" value="140" /></div>
-        <div class="stack"><label class="range-label"><span>Tree spacing min</span><span id="treeSpacingMinValue">40</span></label><input id="treeSpacingMinRange" type="range" min="0" max="400" value="40" /></div>
-        <div class="stack"><label class="range-label"><span>Tree spacing max</span><span id="treeSpacingMaxValue">520</span></label><input id="treeSpacingMaxRange" type="range" min="120" max="1600" value="520" /></div>
-        <div class="stack"><label class="range-label"><span>Box width</span><span id="boxWidthValue">290</span></label><input id="boxWidthRange" type="range" min="220" max="460" value="290" /></div>
-        <div class="stack"><label class="range-label"><span>Box height</span><span id="boxHeightValue">56</span></label><input id="boxHeightRange" type="range" min="28" max="140" value="56" /></div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Options</h2>
-      <div class="toggle-box stack">
-        <label class="toggle-row"><input id="squareCheckbox" type="checkbox" /> More squarish boxes</label>
-        <label class="toggle-row"><input id="mergeCheckbox" type="checkbox" checked /> Show merge nodes</label>
-        <label class="toggle-row"><input id="edgeLabelsCheckbox" type="checkbox" checked /> Show yes / no labels</label>
-        <label class="toggle-row"><input id="crossLinksCheckbox" type="checkbox" checked /> Show blue cross-calls</label>
-      </div>
-    </div>
-
-    <div class="section"><h2>Scripts</h2><div id="scriptList" class="script-list"></div></div>
-  </aside>
-
-  <main class="panel main">
-    <div class="toolbar"><div class="toolbar-left"><div class="title-wrap"><strong id="diagramTitle">No script selected</strong><span id="diagramMeta">Import one or more GDScript files to begin.</span></div></div><div class="toolbar-right"><button id="fitBtn" class="ghost">Fit width</button></div></div>
-    <div class="canvas-wrap" id="canvasWrap"><div class="canvas" id="canvasArea"><div class="empty" id="emptyState"><div><h3 style="margin:0 0 8px;font-size:24px;color:#fff">Drop in your .gd files</h3><div style="max-width:620px">This version fixes horizontal scrolling, avoids cropped SVG/PNG exports by measuring the real content bounds, and exports PDF through a print-safe viewer page.</div></div></div></div></div>
-    <div class="legend"><span class="pill"><span class="dot" style="background:#f08c2b"></span>Function start</span><span class="pill"><span class="dot" style="background:#58c27d"></span>Action</span><span class="pill"><span class="dot" style="background:#ffd166"></span>Condition</span><span class="pill"><span class="dot" style="background:#7eb5ff"></span>Blue cross-call</span><span class="pill"><span class="dot" style="background:#ff6b6b"></span>Return</span><span class="pill"><span class="dot" style="background:#b7c0ca"></span>Merge / end</span></div>
-  </main>
-</div>
-
-<script>
-const state = { files: [], selectedId: null, fontSize: 13, vSpacing: 22, hSpacing: 180, treeSpacing: 140, treeSpacingMin: 40, treeSpacingMax: 520, boxWidth: 290, boxHeight: 56, squareBoxes: false, showMergeNodes: true, showEdgeLabels: true, showCrossLinks: true, mode: 'flow' };
-const els = { fileInput:fileInput, loadDemoBtn:loadDemoBtn, exportSvgBtn:exportSvgBtn, exportPngBtn:exportPngBtn, exportPdfBtn:exportPdfBtn, clearBtn:clearBtn, fitBtn:fitBtn, modeSelect:modeSelect, fontSizeRange:fontSizeRange, vSpacingRange:vSpacingRange, hSpacingRange:hSpacingRange, treeSpacingRange:treeSpacingRange, treeSpacingMinRange:treeSpacingMinRange, treeSpacingMaxRange:treeSpacingMaxRange, boxWidthRange:boxWidthRange, boxHeightRange:boxHeightRange, squareCheckbox:squareCheckbox, mergeCheckbox:mergeCheckbox, edgeLabelsCheckbox:edgeLabelsCheckbox, crossLinksCheckbox:crossLinksCheckbox, fontSizeValue:fontSizeValue, vSpacingValue:vSpacingValue, hSpacingValue:hSpacingValue, treeSpacingValue:treeSpacingValue, treeSpacingMinValue:treeSpacingMinValue, treeSpacingMaxValue:treeSpacingMaxValue, boxWidthValue:boxWidthValue, boxHeightValue:boxHeightValue, scriptList:scriptList, canvasArea:canvasArea, canvasWrap:canvasWrap, diagramTitle:diagramTitle, diagramMeta:diagramMeta, emptyState:emptyState, errorBox:errorBox };
-
-const demoScript = `extends CharacterBody2D
-var target
-func _ready() -> void:
-    target = get_tree().current_scene.get_node_or_null("World/Player")
-    if target == null:
-        return
-func _physics_process(delta: float) -> void:
-    if target != null:
-        target.some_func()
-    elif get_tree().current_scene.has_method("foo"):
-        get_tree().current_scene.foo()
-    else:
-        move_and_slide()
-func some_func() -> void:
-    queue_free()`;
-
-function showError(msg){ els.errorBox.hidden = !msg; els.errorBox.textContent = msg || ''; }
-function escapeXml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
-function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
-function downloadBlob(blob, filename){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100); }
-function readFile(file){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result || '')); reader.onerror=()=>reject(reader.error || new Error('Failed to read file')); reader.readAsText(file); }); }
-function indentOf(line){ const m=line.match(/^(\s*)/); return m ? m[1].replace(/\t/g,'    ').length : 0; }
-function parseFunctions(code){ const lines=code.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n'); const funcs=[]; let current=null; function finishCurrent(endIndex){ if (!current) return; current.endLine=endIndex; current.body=lines.slice(current.startLine, endIndex).join('\n'); funcs.push(current); current=null; } for (let i=0;i<lines.length;i++){ const m=lines[i].match(/^\s*func\s+([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)\s*(?:->\s*([^:]+))?\s*:/); if (m){ finishCurrent(i); current={ name:m[1], params:m[2] || '', returns:(m[3] || '').trim(), startLine:i }; } } finishCurrent(lines.length); return funcs; }
-function parseCalls(fn, allFunctionNames){ const local=new Set(); const re=/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g; let m; while ((m=re.exec(fn.body)) !== null){ const name=m[1]; if (allFunctionNames.includes(name) && name !== fn.name) local.add(name); } return [...local]; }
-function extractMemberChains(trimmed){ const matches=[...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))+\s*\(/g)]; return matches.map(m => m[0].replace(/\s*\($/, '()')); }
-function extractCrossTargets(trimmed, functionMap){ const chains=extractMemberChains(trimmed); const targets=[]; chains.forEach(chain => { const parts=chain.replace(/\(\)$/,'').split('.'); const maybeFn=parts[parts.length - 1]; if (functionMap.has(maybeFn)) targets.push(functionMap.get(maybeFn)); }); return targets; }
-function labelWithChains(trimmed, allFunctionNames){ const calls=[...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1]).filter(name => !['if','elif','for','while','match','preload','load','range','print','str','len','min','max','clamp','int','float','bool','Color','Vector2','Vector3'].includes(name)); const ownCalls=calls.filter(c => allFunctionNames.includes(c)); const chains=extractMemberChains(trimmed).slice(0,2); if (chains.length) return `${trimmed.slice(0,78)}  → ${chains.join(', ')}`; if (ownCalls.length) return `${trimmed.slice(0,88)}  → ${ownCalls.join(', ')}`; return trimmed.slice(0,140); }
-
-function parseBranchGraph(fn, allFunctionNames, functionMap){
-  const bodyLines=fn.body.split('\n'); const baseIndent=indentOf(bodyLines[0] || ''); const nodes=[]; const edges=[]; const crossLinks=[]; let seq=1;
-  const nextId=(prefix='n') => `${fn.name}-${prefix}${seq++}`;
-  const addNode=(type,label,line,row,lane,raw='') => { const node={ id:nextId(type === 'merge' ? 'm' : 'n'), type, label, line, row, lane, raw }; nodes.push(node); return node; };
-  const addEdge=(from,to,label='') => edges.push({ from, to, label });
-  const startNode={ id:`${fn.name}-start`, type:'start', label:`func ${fn.name}()`, line:fn.startLine + 1, row:0, lane:0, raw:'' }; nodes.push(startNode);
-  function parseBlock(startIndex, parentIndent, rowStart, incomingIds, laneBase){
-    let row=rowStart, tails=[...incomingIds], i=startIndex;
-    while (i < bodyLines.length){
-      const raw=bodyLines[i], trimmed=raw.trim(), indent=indentOf(raw), lineNo=fn.startLine + i + 1;
-      if (!trimmed || trimmed.startsWith('#')) { i += 1; continue; }
-      if (indent <= parentIndent) break;
-      const ifMatch=trimmed.match(/^if\s+(.+):$/), returnMatch=trimmed.match(/^return\b\s*(.*)$/), forMatch=trimmed.match(/^for\s+(.+):$/), whileMatch=trimmed.match(/^while\s+(.+):$/), matchMatch=trimmed.match(/^match\s+(.+):$/);
-      if (ifMatch){
-        row += 1; const cond=addNode('condition', `if ${ifMatch[1]}`.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, cond.id, ''));
-        const branches=[]; const ifResult=parseBlock(i + 1, indent, row, [cond.id], laneBase + 1); branches.push({ tails:ifResult.tails, index:ifResult.index });
-        let j=ifResult.index, extra=2;
-        while (j < bodyLines.length){ const t=bodyLines[j].trim(), ind=indentOf(bodyLines[j]); if (ind !== indent) break; const elifMatch=t.match(/^elif\s+(.+):$/), elseMatch=/^else\s*:\s*$/.test(t); if (!elifMatch && !elseMatch) break; row += 1; if (elifMatch){ const elifNode=addNode('condition', `elif ${elifMatch[1]}`.slice(0,140), fn.startLine + j + 1, row, laneBase + extra - 1, t); addEdge(cond.id, elifNode.id, state.showEdgeLabels ? 'no' : ''); const elifResult=parseBlock(j + 1, indent, row, [elifNode.id], laneBase + extra); branches.push({ tails:elifResult.tails, index:elifResult.index }); j=elifResult.index; extra += 1; continue; } if (elseMatch){ const elseNode=addNode('condition', 'else', fn.startLine + j + 1, row, laneBase + extra - 1, t); addEdge(cond.id, elseNode.id, state.showEdgeLabels ? 'no' : ''); const elseResult=parseBlock(j + 1, indent, row, [elseNode.id], laneBase + extra); branches.push({ tails:elseResult.tails, index:elseResult.index }); j=elseResult.index; extra += 1; continue; } }
-        if (branches[0]?.tails[0]) addEdge(cond.id, branches[0].tails[0], state.showEdgeLabels ? 'yes' : '');
-        let merged=branches.flatMap(b => b.tails); if (state.showMergeNodes && merged.length > 1){ row += 1; const merge=addNode('merge', 'merge', lineNo, row, laneBase, 'merge'); merged.forEach(t => addEdge(t, merge.id, 'merge')); merged=[merge.id]; }
-        tails=merged; i=j; continue;
-      }
-      if (forMatch || whileMatch || matchMatch){ row += 1; const label=forMatch ? `for ${forMatch[1]}` : whileMatch ? `while ${whileMatch[1]}` : `match ${matchMatch[1]}`; const node=addNode('condition', label.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); tails=[node.id]; i += 1; continue; }
-      if (returnMatch){ row += 1; const node=addNode('return', trimmed.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); tails=[node.id]; i += 1; continue; }
-      row += 1; const chains=extractMemberChains(trimmed); const type=chains.length ? 'signal' : /\.emit\s*\(/.test(trimmed) ? 'signal' : 'action'; const node=addNode(type, labelWithChains(trimmed, allFunctionNames), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); if (state.showCrossLinks){ extractCrossTargets(trimmed, functionMap).forEach(targetName => crossLinks.push({ from:node.id, toFunction:targetName })); } tails=[node.id]; i += 1;
+    :root{
+      --bg:#1e1f22;
+      --panel:#2a2d31;
+      --panel2:#32363b;
+      --text:#f1f3f5;
+      --muted:#aab2bd;
+      --accent:#f08c2b;
+      --good:#58c27d;
+      --warn:#ffd166;
+      --bad:#ff6b6b;
+      --info:#7eb5ff;
+      --merge:#b7c0ca;
+      --shadow:0 18px 40px rgba(0,0,0,.25);
+      --radius:18px;
     }
-    return { tails, index:i, row };
-  }
-  const result=parseBlock(1, baseIndent, 0, [startNode.id], 0); const endNode={ id:`${fn.name}-end`, type:'end', label:`end ${fn.name}`, line:fn.endLine, row:result.row + 1, lane:0, raw:'' }; nodes.push(endNode); result.tails.forEach(t => addEdge(t, endNode.id, '')); return { nodes, edges, crossLinks };
-}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font:14px/1.45 Inter,Segoe UI,Roboto,Arial,sans-serif;
+      background:linear-gradient(180deg,#1b1c1f,#151618 65%);
+      color:var(--text);
+    }
+    body.dragging{
+      outline:3px solid rgba(240,140,43,.65);
+      outline-offset:-10px;
+    }
+    .app{
+      display:grid;
+      grid-template-columns:430px 1fr;
+      min-height:100vh;
+      gap:16px;
+      padding:16px;
+    }
+    .panel{
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .sidebar{display:flex;flex-direction:column;min-height:0}
+    .section{padding:16px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .section:last-child{border-bottom:0}
+    h1{margin:0 0 6px;font-size:22px;line-height:1.2}
+    h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    p{margin:0 0 10px;color:var(--muted)}
 
-function analyzeScript(name, code){ const functions=parseFunctions(code), functionNames=functions.map(f=>f.name), functionMap=new Map(functionNames.map(n => [n,n])); const flows=functions.map(fn => ({ ...fn, graph:parseBranchGraph(fn, functionNames, functionMap), calls:parseCalls(fn, functionNames) })); return { id:slug(name + '-' + Math.random().toString(36).slice(2,7)), name, code, lines:code.split(/\r?\n/).length, functions:flows }; }
-function roundedRect(x,y,w,h,r,fill,stroke,strokeWidth=1){ return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`; }
-function wrapTextByBox(label, boxWidth, boxHeight, fontSize){ const charsPerLine=Math.max(10, Math.floor((boxWidth - 30) / (fontSize * 0.56))); const maxLines=Math.max(1, Math.floor((boxHeight - 14) / (fontSize + 4))); const words=String(label).split(/\s+/); const lines=[]; let current=''; for (const word of words){ const test=current ? `${current} ${word}` : word; if (test.length <= charsPerLine){ current=test; } else { if (current) lines.push(current); current=word; if (lines.length >= maxLines - 1) break; } } if (lines.length < maxLines && current) lines.push(current); const used=lines.join(' ').split(/\s+/).filter(Boolean).length; if (used < words.length && lines.length) lines[lines.length - 1] = lines[lines.length - 1].replace(/\s*$/, '…'); return lines.slice(0, maxLines); }
-function drawArrow(x1,y1,x2,y2,label='',color='#74808d',width=2){ const mx=(x1 + x2) / 2, my=(y1 + y2) / 2; return `<path d="M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${width}" /><polygon points="${x2},${y2} ${x2-8},${y2-5} ${x2-8},${y2+5}" fill="${color}" />${label ? `<text x="${mx + 8}" y="${my - 6}" font-size="11" fill="${color}">${escapeXml(label)}</text>` : ''}`; }
-function nodePalette(type){ switch(type){ case 'start': return {fill:'#f08c2b', stroke:'#f6b06a', text:'#1c1204'}; case 'end': return {fill:'#2a2d31', stroke:'#b7c0ca', text:'#f1f3f5'}; case 'merge': return {fill:'#3e434c', stroke:'#b7c0ca', text:'#f1f3f5'}; case 'condition': return {fill:'#5b4a16', stroke:'#ffd166', text:'#fff0c2'}; case 'return': return {fill:'#5a2121', stroke:'#ff8a8a', text:'#ffe1e1'}; case 'signal': return {fill:'#263f68', stroke:'#7eb5ff', text:'#e6f1ff'}; default: return {fill:'#1f4a33', stroke:'#58c27d', text:'#e9fff1'}; } }
+    .controls,.stack{display:grid;gap:10px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .subgrid{
+      display:grid;
+      gap:10px;
+      background:rgba(255,255,255,.025);
+      border:1px solid rgba(255,255,255,.05);
+      border-radius:14px;
+      padding:10px;
+    }
 
-function renderFlowSvg(script){
-  const fontSize=state.fontSize, margin=30, baseTreeGap=state.treeSpacing + (state.showCrossLinks ? 100 : 0), laneGap=Math.max(70, state.hSpacing * 0.82), colW=state.boxWidth, nodeH=state.boxHeight, boxRadius=state.squareBoxes ? 8 : 16;
-  let content='', y=margin, maxRight=0; const functionAnchors=new Map(); const treeLayouts=[]; const rowMaxWidth=4200;
-  script.functions.forEach(fn => { const lanes=fn.graph.nodes.map(n => n.lane || 0); const maxLane=lanes.length ? Math.max(...lanes) : 0; const minLane=lanes.length ? Math.min(...lanes) : 0; const laneSpan=maxLane - minLane; const treeWidth=colW + laneSpan * laneGap; const treeHeight=(Math.max(0, ...fn.graph.nodes.map(n => n.row || 0)) + 1) * (nodeH + state.vSpacing); treeLayouts.push({ fn, minLane, maxLane, treeWidth, treeHeight }); });
-  let cursorX=margin, currentRowHeight=0;
-  treeLayouts.forEach((layout, idx) => { if (idx > 0 && cursorX + layout.treeWidth + margin > rowMaxWidth){ cursorX=margin; y += currentRowHeight + 120; currentRowHeight=0; } layout.baseX=cursorX - layout.minLane * laneGap; layout.baseY=y + 34; cursorX += layout.treeWidth + baseTreeGap; currentRowHeight=Math.max(currentRowHeight, layout.treeHeight); maxRight=Math.max(maxRight, layout.baseX + layout.treeWidth); });
-  treeLayouts.forEach(layout => { const fn=layout.fn, x=layout.baseX, localY=layout.baseY, positions=new Map(); functionAnchors.set(fn.name, { x, y:localY, layout }); content += `<text x="${x}" y="${localY - 34}" font-size="18" font-weight="700" fill="#f1f3f5">${escapeXml(fn.name)}()</text>`; content += `<text x="${x}" y="${localY - 16}" font-size="11" fill="#aab2bd">line ${fn.startLine + 1}${fn.returns ? ' → ' + escapeXml(fn.returns) : ''}</text>`; fn.graph.nodes.forEach(node => { const px=x + (node.lane || 0) * laneGap, py=localY + (node.row || 0) * (nodeH + state.vSpacing); positions.set(node.id, { x:px, y:py }); maxRight=Math.max(maxRight, px + colW); }); fn._positions=positions; fn.graph.edges.forEach(edge => { const a=positions.get(edge.from), b=positions.get(edge.to); if (!a || !b) return; const showLabel=state.showEdgeLabels || edge.label === 'merge'; content += drawArrow(a.x + colW/2, a.y + nodeH, b.x + colW/2, b.y, showLabel ? edge.label : ''); }); fn.graph.nodes.forEach(node => { const p=positions.get(node.id), pal=nodePalette(node.type); content += roundedRect(p.x,p.y,colW,nodeH,boxRadius,pal.fill,pal.stroke,1.4); const lines=wrapTextByBox(node.label, colW, nodeH, fontSize); lines.forEach((line, idx) => { const yPos=p.y + 20 + idx * (fontSize + 4); content += `<text x="${p.x + 14}" y="${yPos}" font-size="${idx === 0 ? fontSize : Math.max(10,fontSize - 1)}" font-weight="${idx === 0 ? 700 : 500}" fill="${pal.text}" opacity="${idx === 0 ? 1 : 0.92}">${escapeXml(line)}</text>`; }); content += `<text x="${p.x + colW - 46}" y="${p.y + 20}" font-size="10" fill="${pal.text}" opacity="0.82">L${node.line ?? ''}</text>`; }); });
-  if (state.showCrossLinks){ treeLayouts.forEach(layout => { const fn=layout.fn; fn.graph.crossLinks.forEach(link => { const fromPos=fn._positions.get(link.from), targetAnchor=functionAnchors.get(link.toFunction); if (!fromPos || !targetAnchor) return; const x1=fromPos.x + colW, y1=fromPos.y + nodeH/2, x2=targetAnchor.x, y2=targetAnchor.y + 18; maxRight=Math.max(maxRight, x1, x2); content += drawArrow(x1, y1, x2, y2, link.toFunction, '#7eb5ff', 2.5); }); }); }
-  const maxBottom=Math.max(...treeLayouts.map(layout => layout.baseY + layout.treeHeight), margin + 600); const width=Math.max(1800, maxRight + margin + 120); const height=maxBottom + 120; return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.28" /></filter></defs><rect width="100%" height="100%" fill="#16181b" /><g filter="url(#shadow)">${content}</g></svg>`;
-}
-function renderCallGraphSvg(script){ const width=1320, margin=40, colW=220, rowH=100, cols=Math.max(1, Math.floor((width - margin*2) / (colW + 40))); const positions=new Map(); let content=`<text x="${margin}" y="30" font-size="22" font-weight="700" fill="#f1f3f5">${escapeXml(script.name)} — function call graph</text>`; script.functions.forEach((fn,i) => { const col=i % cols, row=Math.floor(i / cols), x=margin + col * (colW + 40), y=60 + row * rowH; positions.set(fn.name,{x,y}); }); script.functions.forEach(fn => { const a=positions.get(fn.name); fn.calls.forEach(target => { const b=positions.get(target); if (!a || !b) return; content += drawArrow(a.x + colW/2, a.y + 54, b.x + colW/2, b.y, 'calls'); }); }); script.functions.forEach(fn => { const p=positions.get(fn.name), fill=fn.name.startsWith('_') ? '#5b4a16' : '#1f4a33', stroke=fn.name.startsWith('_') ? '#ffd166' : '#58c27d'; content += roundedRect(p.x,p.y,colW,56,state.squareBoxes ? 8 : 16,fill,stroke,1.5); content += `<text x="${p.x + 14}" y="${p.y + 23}" font-size="15" font-weight="700" fill="#f5f7fa">${escapeXml(fn.name)}()</text>`; content += `<text x="${p.x + 14}" y="${p.y + 40}" font-size="11" fill="#d5dde7">${fn.calls.length} outgoing call${fn.calls.length === 1 ? '' : 's'}</text>`; }); const rows=Math.ceil(Math.max(1, script.functions.length) / cols), height=Math.max(260, 80 + rows * rowH + 60); return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#16181b" />${content}</svg>`; }
-
-function getSelectedScript(){ return state.files.find(f => f.id === state.selectedId) || null; }
-function currentSvgString(){ const script=getSelectedScript(); if (!script) return ''; return state.mode === 'calls' ? renderCallGraphSvg(script) : renderFlowSvg(script); }
-function updateReadouts(){ els.fontSizeValue.textContent=state.fontSize; els.vSpacingValue.textContent=state.vSpacing; els.hSpacingValue.textContent=state.hSpacing; els.treeSpacingValue.textContent=state.treeSpacing; els.treeSpacingMinValue.textContent=state.treeSpacingMin; els.treeSpacingMaxValue.textContent=state.treeSpacingMax; els.boxWidthValue.textContent=state.boxWidth; els.boxHeightValue.textContent=state.boxHeight; }
-function renderScriptList(){ els.scriptList.innerHTML=''; if (!state.files.length){ els.scriptList.innerHTML='<div class="hint">No imported scripts yet.</div>'; return; } state.files.forEach(file => { const item=document.createElement('div'); item.className='script-item' + (file.id === state.selectedId ? ' active' : ''); item.innerHTML=`<div class="script-name">${escapeXml(file.name)}</div><div class="script-meta">${file.lines} lines • ${file.functions.length} function${file.functions.length === 1 ? '' : 's'}</div>`; item.addEventListener('click', ()=>{ state.selectedId=file.id; render(); }); els.scriptList.appendChild(item); }); }
-function render(){ const script=getSelectedScript(); updateReadouts(); renderScriptList(); if (!script){ els.diagramTitle.textContent='No script selected'; els.diagramMeta.textContent='Import one or more GDScript files to begin.'; els.canvasArea.innerHTML=''; els.canvasArea.appendChild(els.emptyState); return; } els.diagramTitle.textContent=script.name; els.diagramMeta.textContent=`${script.lines} lines • ${script.functions.length} function${script.functions.length === 1 ? '' : 's'} • ${state.mode === 'calls' ? 'call graph' : 'flow chart'}`; const svg=currentSvgString(); els.canvasArea.innerHTML=`<div class="svg-host">${svg}</div>`; }
-async function importFiles(fileList){ showError(''); const incoming=Array.from(fileList || []); if (!incoming.length) return; const results=[]; for (const file of incoming){ try{ const code=await readFile(file); results.push(analyzeScript(file.name, code)); }catch(err){ showError(`Could not read ${file.name}: ${err.message || err}`); } } state.files=[...state.files, ...results]; if (!state.selectedId && state.files[0]) state.selectedId=state.files[0].id; if (results[0]) state.selectedId=results[0].id; render(); }
-function exportSvg(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; downloadBlob(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), `${script.name.replace(/\.gd$/i,'')}-${state.mode}.svg`); }
-function exportPng(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; const img=new Image(), blob=new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob); img.onload=()=>{ const root=new DOMParser().parseFromString(svg,'image/svg+xml').documentElement, w=Number(root.getAttribute('width')) || 1320, h=Number(root.getAttribute('height')) || 900; const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0); canvas.toBlob((pngBlob)=>{ if (pngBlob) downloadBlob(pngBlob, `${script.name.replace(/\.gd$/i,'')}-${state.mode}.png`); URL.revokeObjectURL(url); }, 'image/png'); }; img.onerror=()=>{ showError('PNG export failed.'); URL.revokeObjectURL(url); }; img.src=url; }
-function exportPdf(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; const blob=new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob); const img=new Image(); img.onload=()=>{ const root=new DOMParser().parseFromString(svg,'image/svg+xml').documentElement, w=Number(root.getAttribute('width')) || 1320, h=Number(root.getAttribute('height')) || 900; const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0); const pngUrl=canvas.toDataURL('image/png'); const win=window.open('', '_blank'); if (!win){ showError('Popup blocked. Allow popups for PDF export.'); URL.revokeObjectURL(url); return; } win.document.write(`<!doctype html><html><head><title>${script.name}</title><style>@page{size:auto;margin:10mm}html,body{margin:0;padding:0;background:#fff}img{display:block;width:100%;height:auto;page-break-inside:avoid}</style></head><body><img src="${pngUrl}" alt="diagram" /><script>window.onload=()=>setTimeout(()=>window.print(),150);<\/script></body></html>`); win.document.close(); URL.revokeObjectURL(url); }; img.onerror=()=>{ showError('PDF export failed.'); URL.revokeObjectURL(url); }; img.src=url; }
-function fitWidth(){ const svg=els.canvasArea.querySelector('svg'); if (!svg) return; svg.style.width='100%'; svg.style.height='auto'; }
-function clearAll(){ state.files=[]; state.selectedId=null; showError(''); render(); }
-
-els.fileInput.addEventListener('change', e => importFiles(e.target.files)); els.loadDemoBtn.addEventListener('click', ()=>{ const demo=analyzeScript('demo_player.gd', demoScript); state.files=[demo, ...state.files]; state.selectedId=demo.id; render(); }); els.exportSvgBtn.addEventListener('click', exportSvg); els.exportPngBtn.addEventListener('click', exportPng); els.exportPdfBtn.addEventListener('click', exportPdf); els.clearBtn.addEventListener('click', clearAll); els.fitBtn.addEventListener('click', fitWidth);
-els.modeSelect.addEventListener('change', e => { state.mode=e.target.value; render(); }); els.fontSizeRange.addEventListener('input', e => { state.fontSize=Number(e.target.value); render(); }); els.vSpacingRange.addEventListener('input', e => { state.vSpacing=Number(e.target.value); render(); }); els.hSpacingRange.addEventListener('input', e => { state.hSpacing=Number(e.target.value); render(); }); els.treeSpacingRange.addEventListener('input', e => { state.treeSpacing=Number(e.target.value); render(); }); els.treeSpacingMinRange.addEventListener('input', e => { state.treeSpacingMin=Number(e.target.value); if (state.treeSpacingMax < state.treeSpacingMin + 10){ state.treeSpacingMax=state.treeSpacingMin + 10; els.treeSpacingMaxRange.value=String(state.treeSpacingMax); } els.treeSpacingRange.min=String(state.treeSpacingMin); els.treeSpacingRange.max=String(state.treeSpacingMax); if (state.treeSpacing < state.treeSpacingMin){ state.treeSpacing=state.treeSpacingMin; els.treeSpacingRange.value=String(state.treeSpacing); } render(); }); els.treeSpacingMaxRange.addEventListener('input', e => { state.treeSpacingMax=Number(e.target.value); if (state.treeSpacingMax <= state.treeSpacingMin){ state.treeSpacingMin=Math.max(0, state.treeSpacingMax - 10); els.treeSpacingMinRange.value=String(state.treeSpacingMin); } els.treeSpacingRange.min=String(state.treeSpacingMin); els.treeSpacingRange.max=String(state.treeSpacingMax); if (state.treeSpacing > state.treeSpacingMax){ state.treeSpacing=state.treeSpacingMax; els.treeSpacingRange.value=String(state.treeSpacing); } render(); }); els.boxWidthRange.addEventListener('input', e => { state.boxWidth=Number(e.target.value); render(); }); els.boxHeightRange.addEventListener('input', e => { state.boxHeight=Number(e.target.value); render(); }); els.squareCheckbox.addEventListener('change', e => { state.squareBoxes=e.target.checked; render(); }); els.mergeCheckbox.addEventListener('change', e => { state.showMergeNodes=e.target.checked; render(); }); els.edgeLabelsCheckbox.addEventListener('change', e => { state.showEdgeLabels=e.target.checked; render(); }); els.crossLinksCheckbox.addEventListener('change', e => { state.showCrossLinks=e.target.checked; render(); }); ['dragenter','dragover'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); document.body.style.outline='2px solid rgba(240,140,43,.65)'; })); ['dragleave','drop'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); document.body.style.outline='none'; })); window.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) importFiles(e.dataTransfer.files); }); els.treeSpacingRange.min=String(state.treeSpacingMin); els.treeSpacingRange.max=String(state.treeSpacingMax); render();
-</script>
-</body>
-</html>
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GDScript Flow Visualizer V7</title>
-  <style>
-    :root{--bg:#1e1f22;--panel:#2a2d31;--panel2:#32363b;--text:#f1f3f5;--muted:#aab2bd;--accent:#f08c2b;--good:#58c27d;--warn:#ffd166;--bad:#ff6b6b;--info:#7eb5ff;--merge:#b7c0ca;--shadow:0 18px 40px rgba(0,0,0,.25);--radius:18px}
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;font:14px/1.45 Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#1b1c1f,#151618 65%);color:var(--text)}
-    .app{display:grid;grid-template-columns:390px 1fr;min-height:100vh;gap:16px;padding:16px}
-    .panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-    .sidebar{display:flex;flex-direction:column;min-height:0}.section{padding:16px;border-bottom:1px solid rgba(255,255,255,.06)}.section:last-child{border-bottom:0}
-    h1{margin:0 0 6px;font-size:22px;line-height:1.2} h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)} p{margin:0 0 10px;color:var(--muted)}
-    .controls,.stack{display:grid;gap:10px}.row{display:flex;gap:10px;flex-wrap:wrap}
-    button,label.file-btn,select,input[type="range"]{appearance:none;border:1px solid rgba(255,255,255,.09);background:#3a3f46;color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.18s ease;font:inherit}
-    input[type="range"]{padding:8px 10px} button:hover,label.file-btn:hover,select:hover{border-color:rgba(255,255,255,.18);transform:translateY(-1px)}
-    button.primary,label.file-btn.primary{background:linear-gradient(180deg,var(--accent),#d77820);color:#1f1305;border-color:#00000022;font-weight:700} button.ghost{background:#2f3338}
+    button,label.file-btn,select,input[type="range"]{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.09);
+      background:#3a3f46;
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      transition:.18s ease;
+      font:inherit;
+    }
+    input[type="range"]{padding:8px 10px}
+    button:hover,label.file-btn:hover,select:hover{
+      border-color:rgba(255,255,255,.18);
+      transform:translateY(-1px);
+    }
+    button.primary,label.file-btn.primary{
+      background:linear-gradient(180deg,var(--accent),#d77820);
+      color:#1f1305;
+      border-color:#00000022;
+      font-weight:700;
+    }
+    button.ghost{background:#2f3338}
     input[type="file"]{display:none}
-    .note,.toggle-box,.legend-box{font-size:12px;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:10px 12px}
-    .toggle-row{display:flex;align-items:center;gap:10px;color:var(--text)} .toggle-row input{accent-color:#f08c2b}
-    .range-label{display:flex;justify-content:space-between;gap:10px}.range-label span:last-child{color:#fff}
-    .legend-box{display:grid;gap:8px}.legend-item{display:flex;gap:10px;align-items:flex-start}.swatch{width:14px;height:14px;border-radius:999px;flex:0 0 auto;margin-top:2px;border:1px solid rgba(255,255,255,.2)}
-    .script-list{display:grid;gap:8px;max-height:240px;overflow:auto;padding-right:2px}.script-item{border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);border-radius:14px;padding:10px 12px;cursor:pointer}.script-item.active{border-color:rgba(240,140,43,.45);background:rgba(240,140,43,.10)}.script-name{font-weight:700}.script-meta{font-size:12px;color:var(--muted);margin-top:3px}
-    .main{display:flex;flex-direction:column;min-height:0}.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap}.toolbar-left,.toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.title-wrap{display:flex;flex-direction:column;gap:2px}.title-wrap strong{font-size:16px}.title-wrap span{color:var(--muted);font-size:12px}
-    .canvas-wrap{position:relative;flex:1;min-height:0;background:radial-gradient(circle at 20% 10%, rgba(240,140,43,.08), transparent 28%),linear-gradient(180deg,#1a1c1f,#151618 70%);overflow:auto}.canvas{min-width:100%;min-height:100%;padding:22px}
-    .legend{display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);color:var(--muted);font-size:12px}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);padding:7px 10px;border-radius:999px}.dot{width:10px;height:10px;border-radius:50%}
-    .empty{display:grid;place-items:center;min-height:420px;border:1px dashed rgba(255,255,255,.10);border-radius:20px;color:var(--muted);background:rgba(255,255,255,.02);text-align:center;padding:20px}.error{margin-top:10px;padding:10px 12px;border-radius:12px;color:#ffd7d7;background:rgba(255,107,107,.10);border:1px solid rgba(255,107,107,.25);white-space:pre-wrap}
+
+    .note,.toggle-box,.legend-box{
+      font-size:12px;
+      color:var(--muted);
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.05);
+      border-radius:12px;
+      padding:10px 12px;
+    }
+    .toggle-row{display:flex;align-items:center;gap:10px;color:var(--text)}
+    .toggle-row input{accent-color:#f08c2b}
+    .range-label{display:flex;justify-content:space-between;gap:10px}
+    .range-label span:last-child{color:#fff}
+    .mini-label{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+
+    .legend-box{display:grid;gap:8px}
+    .legend-item{display:flex;gap:10px;align-items:flex-start}
+    .swatch{
+      width:14px;height:14px;border-radius:999px;flex:0 0 auto;
+      margin-top:2px;border:1px solid rgba(255,255,255,.2)
+    }
+
+    .script-list{
+      display:grid;
+      gap:8px;
+      max-height:240px;
+      overflow:auto;
+      padding-right:2px;
+    }
+    .script-item{
+      border:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.03);
+      border-radius:14px;
+      padding:10px 12px;
+      cursor:pointer;
+    }
+    .script-item.active{
+      border-color:rgba(240,140,43,.45);
+      background:rgba(240,140,43,.10);
+    }
+    .script-name{font-weight:700}
+    .script-meta{font-size:12px;color:var(--muted);margin-top:3px}
+
+    .main{display:flex;flex-direction:column;min-height:0}
+    .toolbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      flex-wrap:wrap;
+    }
+    .toolbar-left,.toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .title-wrap{display:flex;flex-direction:column;gap:2px}
+    .title-wrap strong{font-size:16px}
+    .title-wrap span{color:var(--muted);font-size:12px}
+
+    .canvas-wrap{
+      position:relative;
+      flex:1;
+      min-height:0;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(240,140,43,.08), transparent 28%),
+        linear-gradient(180deg,#1a1c1f,#151618 70%);
+      overflow:auto;
+    }
+    .canvas{
+      min-height:100%;
+      padding:22px;
+      width:max-content;
+      min-width:100%;
+    }
+    .svg-host{
+      display:inline-block;
+      width:max-content;
+      min-width:max-content;
+    }
+    .svg-host svg{display:block}
+
+    .legend{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      padding:12px 16px;
+      border-top:1px solid rgba(255,255,255,.06);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);
+      padding:7px 10px;
+      border-radius:999px;
+    }
+    .dot{width:10px;height:10px;border-radius:50%}
+
+    .empty{
+      display:grid;
+      place-items:center;
+      min-height:420px;
+      border:1px dashed rgba(255,255,255,.10);
+      border-radius:20px;
+      color:var(--muted);
+      background:rgba(255,255,255,.02);
+      text-align:center;
+      padding:20px;
+    }
+    .error{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      color:#ffd7d7;
+      background:rgba(255,107,107,.10);
+      border:1px solid rgba(255,107,107,.25);
+      white-space:pre-wrap;
+    }
+
     svg text{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
-    @media (max-width:980px){.app{grid-template-columns:1fr}.sidebar{order:2}.main{order:1;min-height:60vh}}
+
+    @media (max-width:1100px){
+      .app{grid-template-columns:1fr}
+      .sidebar{order:2}
+      .main{order:1;min-height:60vh}
+      .grid2{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
@@ -217,33 +229,132 @@ els.modeSelect.addEventListener('change', e => { state.mode=e.target.value; rend
   <aside class="panel sidebar">
     <div class="section">
       <h1>GDScript Flow Visualizer</h1>
-      <p>Import one or more <strong>.gd</strong> files and turn functions plus control flow into a readable diagram.</p>
+      <p>Imports one or more <strong>.gd</strong> files and draws cleaner flow charts with clearer routing, colored ports, and adjustable noodle behavior.</p>
+
       <div class="controls">
         <div class="row">
-          <label class="file-btn primary">Import .gd files<input id="fileInput" type="file" accept=".gd,text/plain" multiple /></label>
+          <label class="file-btn primary">
+            Import .gd files
+            <input id="fileInput" type="file" accept=".gd,text/plain" multiple />
+          </label>
           <button id="loadDemoBtn" class="ghost">Load demo</button>
         </div>
         <div class="row">
           <button id="exportSvgBtn">Export SVG</button>
+          <button id="exportPngBtn">Export PNG</button>
           <button id="exportPdfBtn">Export PDF</button>
           <button id="clearBtn">Clear</button>
         </div>
       </div>
-      <div class="note" style="margin-top:12px">Blue links can now be toggled on/off and the layout reserves extra width for them when enabled.</div>
+
+      <div class="note" style="margin-top:12px">
+        This version restores drag and drop, brings back hard spacing limits, and adds colored connection points plus more noodle controls.
+      </div>
       <div id="errorBox" class="error" hidden></div>
     </div>
 
     <div class="section">
-      <h2>View</h2>
+      <h2>Layout</h2>
       <div class="controls">
         <label>Diagram mode</label>
-        <select id="modeSelect"><option value="flow">Flow chart</option><option value="calls">Call graph</option></select>
-        <div class="stack"><label class="range-label"><span>Font size</span><span id="fontSizeValue">13</span></label><input id="fontSizeRange" type="range" min="11" max="20" value="13" /></div>
-        <div class="stack"><label class="range-label"><span>Vertical spacing</span><span id="vSpacingValue">22</span></label><input id="vSpacingRange" type="range" min="2" max="70" value="22" /></div>
-        <div class="stack"><label class="range-label"><span>Horizontal spacing</span><span id="hSpacingValue">180</span></label><input id="hSpacingRange" type="range" min="80" max="520" value="180" /></div>
-        <div class="stack"><label class="range-label"><span>Tree spacing</span><span id="treeSpacingValue">90</span></label><input id="treeSpacingRange" type="range" min="20" max="380" value="90" /></div>
-        <div class="stack"><label class="range-label"><span>Box width</span><span id="boxWidthValue">290</span></label><input id="boxWidthRange" type="range" min="220" max="460" value="290" /></div>
-        <div class="stack"><label class="range-label"><span>Box height</span><span id="boxHeightValue">56</span></label><input id="boxHeightRange" type="range" min="28" max="140" value="56" /></div>
+        <select id="modeSelect">
+          <option value="flow">Flow chart</option>
+          <option value="calls">Call graph</option>
+        </select>
+
+        <div class="stack">
+          <label class="range-label"><span>Font size</span><span id="fontSizeValue">13</span></label>
+          <input id="fontSizeRange" type="range" min="11" max="20" value="13" />
+        </div>
+
+        <div class="subgrid">
+          <div class="stack">
+            <label class="range-label"><span>Vertical spacing</span><span id="vSpacingValue">28</span></label>
+            <input id="vSpacingRange" type="range" min="6" max="140" value="28" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Vertical hard limit</span><span id="vSpacingHardValue">20</span></label>
+            <input id="vSpacingHardRange" type="range" min="0" max="140" value="20" />
+          </div>
+        </div>
+
+        <div class="subgrid">
+          <div class="stack">
+            <label class="range-label"><span>Branch spacing</span><span id="hSpacingValue">200</span></label>
+            <input id="hSpacingRange" type="range" min="100" max="700" value="200" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Branch hard limit</span><span id="hSpacingHardValue">150</span></label>
+            <input id="hSpacingHardRange" type="range" min="40" max="700" value="150" />
+          </div>
+        </div>
+
+        <div class="subgrid">
+          <div class="stack">
+            <label class="range-label"><span>Tree spacing</span><span id="treeSpacingValue">220</span></label>
+            <input id="treeSpacingRange" type="range" min="60" max="1200" value="220" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Tree hard limit</span><span id="treeSpacingHardValue">180</span></label>
+            <input id="treeSpacingHardRange" type="range" min="20" max="1200" value="180" />
+          </div>
+        </div>
+
+        <div class="subgrid">
+          <div class="stack">
+            <label class="range-label"><span>Noodle detour</span><span id="noodleDetourValue">64</span></label>
+            <input id="noodleDetourRange" type="range" min="12" max="220" value="64" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Noodle hard limit</span><span id="noodleHardValue">40</span></label>
+            <input id="noodleHardRange" type="range" min="0" max="220" value="40" />
+          </div>
+        </div>
+
+        <div class="subgrid">
+          <div class="stack">
+            <label class="range-label"><span>Box width</span><span id="boxWidthValue">300</span></label>
+            <input id="boxWidthRange" type="range" min="220" max="560" value="300" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Box height</span><span id="boxHeightValue">60</span></label>
+            <input id="boxHeightRange" type="range" min="36" max="160" value="60" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Noodles</h2>
+      <div class="controls">
+        <label>Noodle style</label>
+        <select id="noodleStyleSelect">
+          <option value="orthogonal">Orthogonal</option>
+          <option value="rounded">Rounded orthogonal</option>
+          <option value="soft">Soft curve</option>
+        </select>
+
+        <div class="grid2">
+          <div class="stack">
+            <label class="range-label"><span>Noodle separation</span><span id="noodleSeparationValue">18</span></label>
+            <input id="noodleSeparationRange" type="range" min="0" max="80" value="18" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Thickness</span><span id="lineThicknessValue">2.4</span></label>
+            <input id="lineThicknessRange" type="range" min="1" max="6" step="0.2" value="2.4" />
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="stack">
+            <label class="range-label"><span>Port size</span><span id="portSizeValue">5</span></label>
+            <input id="portSizeRange" type="range" min="0" max="10" value="5" />
+          </div>
+          <div class="stack">
+            <label class="range-label"><span>Cross-link lift</span><span id="crossLiftValue">42</span></label>
+            <input id="crossLiftRange" type="range" min="8" max="120" value="42" />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -252,43 +363,171 @@ els.modeSelect.addEventListener('change', e => { state.mode=e.target.value; rend
       <div class="toggle-box stack">
         <label class="toggle-row"><input id="squareCheckbox" type="checkbox" /> More squarish boxes</label>
         <label class="toggle-row"><input id="mergeCheckbox" type="checkbox" checked /> Show merge nodes</label>
-        <label class="toggle-row"><input id="edgeLabelsCheckbox" type="checkbox" checked /> Show yes / no labels</label>
         <label class="toggle-row"><input id="crossLinksCheckbox" type="checkbox" checked /> Show blue cross-calls</label>
+        <label class="toggle-row"><input id="portsCheckbox" type="checkbox" checked /> Show connection points</label>
+        <label class="toggle-row"><input id="outlinesCheckbox" type="checkbox" checked /> Use dark edge outlines</label>
       </div>
     </div>
 
     <div class="section">
       <h2>Color coding</h2>
       <div class="legend-box">
-        <div class="legend-item"><span class="swatch" style="background:#f08c2b"></span><div><strong>Orange</strong><br>Function start / entry.</div></div>
-        <div class="legend-item"><span class="swatch" style="background:#58c27d"></span><div><strong>Green</strong><br>Action / assignment / regular step.</div></div>
-        <div class="legend-item"><span class="swatch" style="background:#ffd166"></span><div><strong>Yellow</strong><br>Condition / branch / decision.</div></div>
-        <div class="legend-item"><span class="swatch" style="background:#7eb5ff"></span><div><strong>Blue</strong><br>Cross-function member call.</div></div>
+        <div class="legend-item"><span class="swatch" style="background:#f08c2b"></span><div><strong>Orange</strong><br>Function entry.</div></div>
+        <div class="legend-item"><span class="swatch" style="background:#58c27d"></span><div><strong>Green</strong><br>Regular actions.</div></div>
+        <div class="legend-item"><span class="swatch" style="background:#ffd166"></span><div><strong>Yellow</strong><br>Conditions / branch points.</div></div>
+        <div class="legend-item"><span class="swatch" style="background:#7eb5ff"></span><div><strong>Blue</strong><br>Cross-function member calls.</div></div>
         <div class="legend-item"><span class="swatch" style="background:#ff6b6b"></span><div><strong>Red</strong><br>Return / stop path.</div></div>
         <div class="legend-item"><span class="swatch" style="background:#b7c0ca"></span><div><strong>Gray</strong><br>Merge / function end.</div></div>
       </div>
     </div>
 
-    <div class="section" style="flex:1;min-height:0"><h2>Scripts</h2><div id="scriptList" class="script-list"></div></div>
+    <div class="section" style="flex:1;min-height:0">
+      <h2>Scripts</h2>
+      <div id="scriptList" class="script-list"></div>
+    </div>
   </aside>
 
   <main class="panel main">
-    <div class="toolbar"><div class="toolbar-left"><div class="title-wrap"><strong id="diagramTitle">No script selected</strong><span id="diagramMeta">Import one or more GDScript files to begin.</span></div></div><div class="toolbar-right"><button id="fitBtn" class="ghost">Fit width</button><button id="pngBtn" class="ghost">Export PNG</button></div></div>
-    <div class="canvas-wrap"><div class="canvas" id="canvasArea"><div class="empty" id="emptyState"><div><h3 style="margin:0 0 8px;font-size:24px;color:#fff">Drop in your .gd files</h3><div style="max-width:620px">Blue cross-calls are optional now. When enabled, the layout gives trees extra room so those links stay visible instead of being squeezed out.</div></div></div></div></div>
-    <div class="legend"><span class="pill"><span class="dot" style="background:#f08c2b"></span>Function start</span><span class="pill"><span class="dot" style="background:#58c27d"></span>Action</span><span class="pill"><span class="dot" style="background:#ffd166"></span>Condition</span><span class="pill"><span class="dot" style="background:#7eb5ff"></span>Blue cross-call</span><span class="pill"><span class="dot" style="background:#ff6b6b"></span>Return</span><span class="pill"><span class="dot" style="background:#b7c0ca"></span>Merge / end</span></div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="title-wrap">
+          <strong id="diagramTitle">No script selected</strong>
+          <span id="diagramMeta">Import one or more GDScript files to begin.</span>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <button id="fitBtn" class="ghost">Fit width</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <div class="canvas" id="canvasArea">
+        <div class="empty" id="emptyState">
+          <div>
+            <h3 style="margin:0 0 8px;font-size:24px;color:#fff">Drop in your .gd files</h3>
+            <div style="max-width:620px">
+              This build restores drag and drop, exposes hard spacing limits again, and makes the node ports color-coded so the routing reads much more clearly.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="pill"><span class="dot" style="background:#f08c2b"></span>Entry</span>
+      <span class="pill"><span class="dot" style="background:#58c27d"></span>Action</span>
+      <span class="pill"><span class="dot" style="background:#ffd166"></span>Condition</span>
+      <span class="pill"><span class="dot" style="background:#7eb5ff"></span>Cross-call</span>
+      <span class="pill"><span class="dot" style="background:#ff6b6b"></span>Return</span>
+      <span class="pill"><span class="dot" style="background:#b7c0ca"></span>Merge / end</span>
+    </div>
   </main>
 </div>
 
 <script>
-const state = { files: [], selectedId: null, fontSize: 13, vSpacing: 22, hSpacing: 180, treeSpacing: 90, boxWidth: 290, boxHeight: 56, squareBoxes: false, showMergeNodes: true, showEdgeLabels: true, showCrossLinks: true, mode: 'flow' };
-const els = { fileInput:fileInput, loadDemoBtn:loadDemoBtn, exportSvgBtn:exportSvgBtn, exportPdfBtn:exportPdfBtn, clearBtn:clearBtn, fitBtn:fitBtn, pngBtn:pngBtn, modeSelect:modeSelect, fontSizeRange:fontSizeRange, vSpacingRange:vSpacingRange, hSpacingRange:hSpacingRange, treeSpacingRange:treeSpacingRange, boxWidthRange:boxWidthRange, boxHeightRange:boxHeightRange, squareCheckbox:squareCheckbox, mergeCheckbox:mergeCheckbox, edgeLabelsCheckbox:edgeLabelsCheckbox, crossLinksCheckbox:crossLinksCheckbox, fontSizeValue:fontSizeValue, vSpacingValue:vSpacingValue, hSpacingValue:hSpacingValue, treeSpacingValue:treeSpacingValue, boxWidthValue:boxWidthValue, boxHeightValue:boxHeightValue, scriptList:scriptList, canvasArea:canvasArea, diagramTitle:diagramTitle, diagramMeta:diagramMeta, emptyState:emptyState, errorBox:errorBox };
+const state = {
+  files: [],
+  selectedId: null,
+  mode: 'flow',
+
+  fontSize: 13,
+
+  vSpacing: 28,
+  vSpacingHard: 20,
+
+  hSpacing: 200,
+  hSpacingHard: 150,
+
+  treeSpacing: 220,
+  treeSpacingHard: 180,
+
+  noodleDetour: 64,
+  noodleHard: 40,
+  noodleStyle: 'orthogonal',
+  noodleSeparation: 18,
+  lineThickness: 2.4,
+  portSize: 5,
+  crossLift: 42,
+
+  boxWidth: 300,
+  boxHeight: 60,
+
+  squareBoxes: false,
+  showMergeNodes: true,
+  showCrossLinks: true,
+  showPorts: true,
+  showOutlines: true
+};
+
+const els = {
+  fileInput,
+  loadDemoBtn,
+  exportSvgBtn,
+  exportPngBtn,
+  exportPdfBtn,
+  clearBtn,
+  fitBtn,
+
+  modeSelect,
+
+  fontSizeRange,
+  vSpacingRange,
+  vSpacingHardRange,
+  hSpacingRange,
+  hSpacingHardRange,
+  treeSpacingRange,
+  treeSpacingHardRange,
+  noodleDetourRange,
+  noodleHardRange,
+  noodleStyleSelect,
+  noodleSeparationRange,
+  lineThicknessRange,
+  portSizeRange,
+  crossLiftRange,
+  boxWidthRange,
+  boxHeightRange,
+
+  squareCheckbox,
+  mergeCheckbox,
+  crossLinksCheckbox,
+  portsCheckbox,
+  outlinesCheckbox,
+
+  fontSizeValue,
+  vSpacingValue,
+  vSpacingHardValue,
+  hSpacingValue,
+  hSpacingHardValue,
+  treeSpacingValue,
+  treeSpacingHardValue,
+  noodleDetourValue,
+  noodleHardValue,
+  noodleSeparationValue,
+  lineThicknessValue,
+  portSizeValue,
+  crossLiftValue,
+  boxWidthValue,
+  boxHeightValue,
+
+  scriptList,
+  canvasArea,
+  canvasWrap,
+  diagramTitle,
+  diagramMeta,
+  emptyState,
+  errorBox
+};
 
 const demoScript = `extends CharacterBody2D
 var target
+
 func _ready() -> void:
     target = get_tree().current_scene.get_node_or_null("World/Player")
     if target == null:
         return
+    else:
+        setup_enemy()
+
 func _physics_process(delta: float) -> void:
     if target != null:
         target.some_func()
@@ -296,117 +535,1031 @@ func _physics_process(delta: float) -> void:
         get_tree().current_scene.foo()
     else:
         move_and_slide()
-func some_func() -> void:
-    queue_free()`;
+    move_and_slide()
 
-function showError(msg){ els.errorBox.hidden = !msg; els.errorBox.textContent = msg || ''; }
-function escapeXml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
-function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
-function downloadBlob(blob, filename){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100); }
-function readFile(file){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result || '')); reader.onerror=()=>reject(reader.error || new Error('Failed to read file')); reader.readAsText(file); }); }
-function indentOf(line){ const m=line.match(/^(\s*)/); return m ? m[1].replace(/\t/g,'    ').length : 0; }
-function parseFunctions(code){ const lines=code.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n'); const funcs=[]; let current=null; function finishCurrent(endIndex){ if (!current) return; current.endLine=endIndex; current.body=lines.slice(current.startLine, endIndex).join('\n'); funcs.push(current); current=null; } for (let i=0;i<lines.length;i++){ const m=lines[i].match(/^\s*func\s+([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)\s*(?:->\s*([^:]+))?\s*:/); if (m){ finishCurrent(i); current={ name:m[1], params:m[2] || '', returns:(m[3] || '').trim(), startLine:i }; } } finishCurrent(lines.length); return funcs; }
-function parseCalls(fn, allFunctionNames){ const local=new Set(); const re=/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g; let m; while ((m=re.exec(fn.body)) !== null){ const name=m[1]; if (allFunctionNames.includes(name) && name !== fn.name) local.add(name); } return [...local]; }
-function extractMemberChains(trimmed){ const matches=[...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))+\s*\(/g)]; return matches.map(m => m[0].replace(/\s*\($/, '()')); }
-function extractCrossTargets(trimmed, functionMap){ const chains=extractMemberChains(trimmed); const targets=[]; chains.forEach(chain => { const parts=chain.replace(/\(\)$/,'').split('.'); const maybeFn=parts[parts.length - 1]; if (functionMap.has(maybeFn)) targets.push(functionMap.get(maybeFn)); }); return targets; }
-function labelWithChains(trimmed, allFunctionNames){ const calls=[...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1]).filter(name => !['if','elif','for','while','match','preload','load','range','print','str','len','min','max','clamp','int','float','bool','Color','Vector2','Vector3'].includes(name)); const ownCalls=calls.filter(c => allFunctionNames.includes(c)); const chains=extractMemberChains(trimmed).slice(0,2); if (chains.length) return `${trimmed.slice(0,78)}  → ${chains.join(', ')}`; if (ownCalls.length) return `${trimmed.slice(0,88)}  → ${ownCalls.join(', ')}`; return trimmed.slice(0,140); }
+func setup_enemy() -> void:
+    queue_free()
+
+func some_func() -> void:
+    queue_free()
+`;
+
+function showError(msg){
+  els.errorBox.hidden = !msg;
+  els.errorBox.textContent = msg || '';
+}
+
+function escapeXml(str){
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+
+function slug(s){
+  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+
+function downloadBlob(blob, filename){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 100);
+}
+
+function readFile(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+}
+
+function indentOf(line){
+  const m = line.match(/^(\s*)/);
+  return m ? m[1].replace(/\t/g,'    ').length : 0;
+}
+
+function parseFunctions(code){
+  const lines = code.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  const funcs = [];
+  let current = null;
+
+  function finishCurrent(endIndex){
+    if (!current) return;
+    current.endLine = endIndex;
+    current.body = lines.slice(current.startLine, endIndex).join('\n');
+    funcs.push(current);
+    current = null;
+  }
+
+  for (let i=0; i<lines.length; i++){
+    const m = lines[i].match(/^\s*func\s+([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)\s*(?:->\s*([^:]+))?\s*:/);
+    if (m){
+      finishCurrent(i);
+      current = {
+        name: m[1],
+        params: m[2] || '',
+        returns: (m[3] || '').trim(),
+        startLine: i
+      };
+    }
+  }
+
+  finishCurrent(lines.length);
+  return funcs;
+}
+
+function parseCalls(fn, allFunctionNames){
+  const local = new Set();
+  const re = /\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+  let m;
+  while ((m = re.exec(fn.body)) !== null){
+    const name = m[1];
+    if (allFunctionNames.includes(name) && name !== fn.name) local.add(name);
+  }
+  return [...local];
+}
+
+function extractMemberChains(trimmed){
+  const matches = [...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))+\s*\(/g)];
+  return matches.map(m => m[0].replace(/\s*\($/, '()'));
+}
+
+function extractCrossTargets(trimmed, functionMap){
+  const chains = extractMemberChains(trimmed);
+  const targets = [];
+  chains.forEach(chain => {
+    const parts = chain.replace(/\(\)$/,'').split('.');
+    const maybeFn = parts[parts.length - 1];
+    if (functionMap.has(maybeFn)) targets.push(functionMap.get(maybeFn));
+  });
+  return targets;
+}
+
+function labelWithChains(trimmed, allFunctionNames){
+  const calls = [...trimmed.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)]
+    .map(m => m[1])
+    .filter(name => ![
+      'if','elif','for','while','match','preload','load','range','print','str','len',
+      'min','max','clamp','int','float','bool','Color','Vector2','Vector3'
+    ].includes(name));
+
+  const ownCalls = calls.filter(c => allFunctionNames.includes(c));
+  const chains = extractMemberChains(trimmed).slice(0,2);
+
+  if (chains.length) return `${trimmed.slice(0,78)}  → ${chains.join(', ')}`;
+  if (ownCalls.length) return `${trimmed.slice(0,88)}  → ${ownCalls.join(', ')}`;
+  return trimmed.slice(0,140);
+}
 
 function parseBranchGraph(fn, allFunctionNames, functionMap){
-  const bodyLines=fn.body.split('\n'); const baseIndent=indentOf(bodyLines[0] || ''); const nodes=[]; const edges=[]; const crossLinks=[]; let seq=1;
-  const nextId=(prefix='n') => `${fn.name}-${prefix}${seq++}`;
-  const addNode=(type,label,line,row,lane,raw='') => { const node={ id:nextId(type === 'merge' ? 'm' : 'n'), type, label, line, row, lane, raw }; nodes.push(node); return node; };
-  const addEdge=(from,to,label='') => edges.push({ from, to, label });
-  const startNode={ id:`${fn.name}-start`, type:'start', label:`func ${fn.name}()`, line:fn.startLine + 1, row:0, lane:0, raw:'' }; nodes.push(startNode);
+  const bodyLines = fn.body.split('\n');
+  const baseIndent = indentOf(bodyLines[0] || '');
+  const nodes = [];
+  const edges = [];
+  const crossLinks = [];
+  let seq = 1;
+
+  const nextId = (prefix='n') => `${fn.name}-${prefix}${seq++}`;
+
+  const addNode = (type,label,line,row,lane,raw='',portKind='normal') => {
+    const node = { id: nextId(type === 'merge' ? 'm' : 'n'), type, label, line, row, lane, raw, portKind };
+    nodes.push(node);
+    return node;
+  };
+
+  const addEdge = (from,to,label='',kind='normal') => edges.push({ from,to,label,kind });
+
+  const startNode = {
+    id: `${fn.name}-start`,
+    type: 'start',
+    label: `func ${fn.name}()`,
+    line: fn.startLine + 1,
+    row: 0,
+    lane: 0,
+    raw: '',
+    portKind: 'normal'
+  };
+  nodes.push(startNode);
 
   function parseBlock(startIndex, parentIndent, rowStart, incomingIds, laneBase){
-    let row=rowStart, tails=[...incomingIds], i=startIndex;
+    let row = rowStart;
+    let tails = [...incomingIds];
+    let i = startIndex;
+
     while (i < bodyLines.length){
-      const raw=bodyLines[i], trimmed=raw.trim(), indent=indentOf(raw), lineNo=fn.startLine + i + 1;
-      if (!trimmed || trimmed.startsWith('#')) { i += 1; continue; }
-      if (indent <= parentIndent) break;
-      const ifMatch=trimmed.match(/^if\s+(.+):$/), returnMatch=trimmed.match(/^return\b\s*(.*)$/), forMatch=trimmed.match(/^for\s+(.+):$/), whileMatch=trimmed.match(/^while\s+(.+):$/), matchMatch=trimmed.match(/^match\s+(.+):$/);
-      if (ifMatch){
-        row += 1; const cond=addNode('condition', `if ${ifMatch[1]}`.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, cond.id, ''));
-        const branches=[]; const ifResult=parseBlock(i + 1, indent, row, [cond.id], laneBase + 1); branches.push({ tails:ifResult.tails, index:ifResult.index });
-        let j=ifResult.index, extra=2;
-        while (j < bodyLines.length){ const t=bodyLines[j].trim(), ind=indentOf(bodyLines[j]); if (ind !== indent) break; const elifMatch=t.match(/^elif\s+(.+):$/), elseMatch=/^else\s*:\s*$/.test(t); if (!elifMatch && !elseMatch) break; row += 1; if (elifMatch){ const elifNode=addNode('condition', `elif ${elifMatch[1]}`.slice(0,140), fn.startLine + j + 1, row, laneBase + extra - 1, t); addEdge(cond.id, elifNode.id, state.showEdgeLabels ? 'no' : ''); const elifResult=parseBlock(j + 1, indent, row, [elifNode.id], laneBase + extra); branches.push({ tails:elifResult.tails, index:elifResult.index }); j=elifResult.index; extra += 1; continue; } if (elseMatch){ const elseNode=addNode('condition', 'else', fn.startLine + j + 1, row, laneBase + extra - 1, t); addEdge(cond.id, elseNode.id, state.showEdgeLabels ? 'no' : ''); const elseResult=parseBlock(j + 1, indent, row, [elseNode.id], laneBase + extra); branches.push({ tails:elseResult.tails, index:elseResult.index }); j=elseResult.index; extra += 1; continue; } }
-        if (branches[0]?.tails[0]) addEdge(cond.id, branches[0].tails[0], state.showEdgeLabels ? 'yes' : '');
-        let merged=branches.flatMap(b => b.tails); if (state.showMergeNodes && merged.length > 1){ row += 1; const merge=addNode('merge', 'merge', lineNo, row, laneBase, 'merge'); merged.forEach(t => addEdge(t, merge.id, 'merge')); merged=[merge.id]; }
-        tails=merged; i=j; continue;
+      const raw = bodyLines[i];
+      const trimmed = raw.trim();
+      const indent = indentOf(raw);
+      const lineNo = fn.startLine + i + 1;
+
+      if (!trimmed || trimmed.startsWith('#')){
+        i += 1;
+        continue;
       }
-      if (forMatch || whileMatch || matchMatch){ row += 1; const label=forMatch ? `for ${forMatch[1]}` : whileMatch ? `while ${whileMatch[1]}` : `match ${matchMatch[1]}`; const type=forMatch || whileMatch ? 'condition' : 'condition'; const node=addNode(type, label.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); tails=[node.id]; i += 1; continue; }
-      if (returnMatch){ row += 1; const node=addNode('return', trimmed.slice(0,140), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); tails=[node.id]; i += 1; continue; }
-      row += 1; const chains=extractMemberChains(trimmed); const type=chains.length ? 'signal' : /\.emit\s*\(/.test(trimmed) ? 'signal' : 'action'; const node=addNode(type, labelWithChains(trimmed, allFunctionNames), lineNo, row, laneBase, trimmed); tails.forEach(t => addEdge(t, node.id, '')); if (state.showCrossLinks){ extractCrossTargets(trimmed, functionMap).forEach(targetName => crossLinks.push({ from:node.id, toFunction:targetName })); } tails=[node.id]; i += 1;
+      if (indent <= parentIndent) break;
+
+      const ifMatch = trimmed.match(/^if\s+(.+):$/);
+      const returnMatch = trimmed.match(/^return\b\s*(.*)$/);
+      const forMatch = trimmed.match(/^for\s+(.+):$/);
+      const whileMatch = trimmed.match(/^while\s+(.+):$/);
+      const matchMatch = trimmed.match(/^match\s+(.+):$/);
+
+      if (ifMatch){
+        row += 1;
+        const cond = addNode('condition', `if ${ifMatch[1]}`.slice(0,140), lineNo, row, laneBase, trimmed, 'condition');
+        tails.forEach(t => addEdge(t, cond.id, '', 'normal'));
+
+        const yesResult = parseBlock(i + 1, indent, row, [cond.id], laneBase + 1);
+        if (yesResult.tails[0]) addEdge(cond.id, yesResult.tails[0], 'yes', 'yes');
+
+        let allTails = [...yesResult.tails];
+        let j = yesResult.index;
+        let elseLane = laneBase - 1;
+        let sourceForNo = cond.id;
+
+        while (j < bodyLines.length){
+          const t = bodyLines[j].trim();
+          const ind = indentOf(bodyLines[j]);
+          if (ind !== indent) break;
+
+          const elifMatch = t.match(/^elif\s+(.+):$/);
+          const elseMatch = /^else\s*:\s*$/.test(t);
+
+          if (!elifMatch && !elseMatch) break;
+
+          row += 1;
+
+          if (elifMatch){
+            const elifNode = addNode('condition', `elif ${elifMatch[1]}`.slice(0,140), fn.startLine + j + 1, row, elseLane, t, 'condition');
+            addEdge(sourceForNo, elifNode.id, 'no', 'no');
+            const elifResult = parseBlock(j + 1, indent, row, [elifNode.id], elseLane - 1);
+            if (elifResult.tails[0]) addEdge(elifNode.id, elifResult.tails[0], 'yes', 'yes');
+            allTails.push(...elifResult.tails);
+            sourceForNo = elifNode.id;
+            j = elifResult.index;
+            elseLane -= 2;
+            continue;
+          }
+
+          if (elseMatch){
+            const elseNode = addNode('condition', 'else', fn.startLine + j + 1, row, elseLane, t, 'condition');
+            addEdge(sourceForNo, elseNode.id, 'no', 'no');
+            const elseResult = parseBlock(j + 1, indent, row, [elseNode.id], elseLane - 1);
+            allTails.push(...elseResult.tails);
+            j = elseResult.index;
+            elseLane -= 2;
+            continue;
+          }
+        }
+
+        let merged = [...new Set(allTails)];
+        if (state.showMergeNodes && merged.length > 1){
+          row += 1;
+          const merge = addNode('merge', 'merge', lineNo, row, laneBase, 'merge', 'merge');
+          merged.forEach(t => addEdge(t, merge.id, 'merge', 'merge'));
+          merged = [merge.id];
+        }
+
+        tails = merged;
+        i = j;
+        continue;
+      }
+
+      if (forMatch || whileMatch || matchMatch){
+        row += 1;
+        const label = forMatch ? `for ${forMatch[1]}` : whileMatch ? `while ${whileMatch[1]}` : `match ${matchMatch[1]}`;
+        const node = addNode('condition', label.slice(0,140), lineNo, row, laneBase, trimmed, 'condition');
+        tails.forEach(t => addEdge(t, node.id, '', 'normal'));
+        tails = [node.id];
+        i += 1;
+        continue;
+      }
+
+      if (returnMatch){
+        row += 1;
+        const node = addNode('return', trimmed.slice(0,140), lineNo, row, laneBase, trimmed, 'return');
+        tails.forEach(t => addEdge(t, node.id, '', 'normal'));
+        tails = [node.id];
+        i += 1;
+        continue;
+      }
+
+      row += 1;
+      const chains = extractMemberChains(trimmed);
+      const type = chains.length ? 'signal' : /\.emit\s*\(/.test(trimmed) ? 'signal' : 'action';
+      const node = addNode(type, labelWithChains(trimmed, allFunctionNames), lineNo, row, laneBase, trimmed, type === 'signal' ? 'signal' : 'normal');
+
+      tails.forEach(t => addEdge(t, node.id, '', 'normal'));
+
+      if (state.showCrossLinks){
+        extractCrossTargets(trimmed, functionMap).forEach(targetName => {
+          crossLinks.push({ from: node.id, toFunction: targetName });
+        });
+      }
+
+      tails = [node.id];
+      i += 1;
     }
+
     return { tails, index:i, row };
   }
 
-  const result=parseBlock(1, baseIndent, 0, [startNode.id], 0);
-  const endNode={ id:`${fn.name}-end`, type:'end', label:`end ${fn.name}`, line:fn.endLine, row:result.row + 1, lane:0, raw:'' }; nodes.push(endNode); result.tails.forEach(t => addEdge(t, endNode.id, ''));
+  const result = parseBlock(1, baseIndent, 0, [startNode.id], 0);
+
+  const endNode = {
+    id: `${fn.name}-end`,
+    type: 'end',
+    label: `end ${fn.name}`,
+    line: fn.endLine,
+    row: result.row + 1,
+    lane: 0,
+    raw: '',
+    portKind: 'end'
+  };
+  nodes.push(endNode);
+
+  result.tails.forEach(t => addEdge(t, endNode.id, '', 'normal'));
+
   return { nodes, edges, crossLinks };
 }
 
-function analyzeScript(name, code){ const functions=parseFunctions(code), functionNames=functions.map(f=>f.name), functionMap=new Map(functionNames.map(n => [n,n])); const flows=functions.map(fn => ({ ...fn, graph:parseBranchGraph(fn, functionNames, functionMap), calls:parseCalls(fn, functionNames) })); return { id:slug(name + '-' + Math.random().toString(36).slice(2,7)), name, code, lines:code.split(/\r?\n/).length, functions:flows }; }
-function roundedRect(x,y,w,h,r,fill,stroke,strokeWidth=1){ return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`; }
-function wrapTextByBox(label, boxWidth, boxHeight, fontSize){ const charsPerLine=Math.max(10, Math.floor((boxWidth - 30) / (fontSize * 0.56))); const maxLines=Math.max(1, Math.floor((boxHeight - 14) / (fontSize + 4))); const words=String(label).split(/\s+/); const lines=[]; let current=''; for (const word of words){ const test=current ? `${current} ${word}` : word; if (test.length <= charsPerLine){ current=test; } else { if (current) lines.push(current); current=word; if (lines.length >= maxLines - 1) break; } } if (lines.length < maxLines && current) lines.push(current); const used=lines.join(' ').split(/\s+/).filter(Boolean).length; if (used < words.length && lines.length) lines[lines.length - 1] = lines[lines.length - 1].replace(/\s*$/, '…'); return lines.slice(0, maxLines); }
-function drawArrow(x1,y1,x2,y2,label='',color='#74808d',width=2){ const mx=(x1 + x2) / 2, my=(y1 + y2) / 2; return `<path d="M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${width}" /><polygon points="${x2},${y2} ${x2-8},${y2-5} ${x2-8},${y2+5}" fill="${color}" />${label ? `<text x="${mx + 8}" y="${my - 6}" font-size="11" fill="${color}">${escapeXml(label)}</text>` : ''}`; }
-function nodePalette(type){ switch(type){ case 'start': return {fill:'#f08c2b', stroke:'#f6b06a', text:'#1c1204'}; case 'end': return {fill:'#2a2d31', stroke:'#b7c0ca', text:'#f1f3f5'}; case 'merge': return {fill:'#3e434c', stroke:'#b7c0ca', text:'#f1f3f5'}; case 'condition': return {fill:'#5b4a16', stroke:'#ffd166', text:'#fff0c2'}; case 'return': return {fill:'#5a2121', stroke:'#ff8a8a', text:'#ffe1e1'}; case 'signal': return {fill:'#263f68', stroke:'#7eb5ff', text:'#e6f1ff'}; default: return {fill:'#1f4a33', stroke:'#58c27d', text:'#e9fff1'}; } }
+function analyzeScript(name, code){
+  const functions = parseFunctions(code);
+  const functionNames = functions.map(f => f.name);
+  const functionMap = new Map(functionNames.map(n => [n,n]));
+  const flows = functions.map(fn => ({
+    ...fn,
+    graph: parseBranchGraph(fn, functionNames, functionMap),
+    calls: parseCalls(fn, functionNames)
+  }));
+
+  return {
+    id: slug(name + '-' + Math.random().toString(36).slice(2,7)),
+    name,
+    code,
+    lines: code.split(/\r?\n/).length,
+    functions: flows
+  };
+}
+
+function roundedRect(x,y,w,h,r,fill,stroke,strokeWidth=1){
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+}
+
+function wrapTextByBox(label, boxWidth, boxHeight, fontSize){
+  const charsPerLine = Math.max(10, Math.floor((boxWidth - 30) / (fontSize * 0.56)));
+  const maxLines = Math.max(1, Math.floor((boxHeight - 14) / (fontSize + 4)));
+  const words = String(label).split(/\s+/);
+  const lines = [];
+  let current = '';
+
+  for (const word of words){
+    const test = current ? `${current} ${word}` : word;
+    if (test.length <= charsPerLine){
+      current = test;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+      if (lines.length >= maxLines - 1) break;
+    }
+  }
+
+  if (lines.length < maxLines && current) lines.push(current);
+
+  const used = lines.join(' ').split(/\s+/).filter(Boolean).length;
+  if (used < words.length && lines.length){
+    lines[lines.length - 1] = lines[lines.length - 1].replace(/\s*$/, '…');
+  }
+
+  return lines.slice(0, maxLines);
+}
+
+function clampSpacing(value, hardValue){
+  return Math.max(value, hardValue);
+}
+
+function portFor(node, pos, colW, nodeH, side){
+  if (side === 'top') return { x: pos.x + colW/2, y: pos.y };
+  if (side === 'bottom') return { x: pos.x + colW/2, y: pos.y + nodeH };
+  if (side === 'right') return { x: pos.x + colW, y: pos.y + nodeH/2 };
+  if (side === 'left') return { x: pos.x, y: pos.y + nodeH/2 };
+  return { x: pos.x + colW/2, y: pos.y + nodeH/2 };
+}
+
+function nodePalette(type){
+  switch(type){
+    case 'start': return {fill:'#f08c2b', stroke:'#f6b06a', text:'#1c1204'};
+    case 'end': return {fill:'#2a2d31', stroke:'#b7c0ca', text:'#f1f3f5'};
+    case 'merge': return {fill:'#3e434c', stroke:'#b7c0ca', text:'#f1f3f5'};
+    case 'condition': return {fill:'#5b4a16', stroke:'#ffd166', text:'#fff0c2'};
+    case 'return': return {fill:'#5a2121', stroke:'#ff8a8a', text:'#ffe1e1'};
+    case 'signal': return {fill:'#2f4d83', stroke:'#7eb5ff', text:'#e6f1ff'};
+    default: return {fill:'#1f4a33', stroke:'#58c27d', text:'#e9fff1'};
+  }
+}
+
+function edgeColor(edge, fromNode, toNode){
+  if (edge.kind === 'yes') return '#58c27d';
+  if (edge.kind === 'no') return '#ffd166';
+  if (edge.kind === 'merge') return '#b7c0ca';
+  if (fromNode.type === 'signal') return '#7eb5ff';
+  if (toNode.type === 'return') return '#ff6b6b';
+  return '#8fa0b5';
+}
+
+function pathOrthogonal(points){
+  return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ');
+}
+
+function pathRounded(points, radius=14){
+  if (points.length < 2) return '';
+  let d = `M ${points[0].x} ${points[0].y}`;
+
+  for (let i = 1; i < points.length - 1; i++){
+    const p0 = points[i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+
+    const vx1 = p1.x - p0.x;
+    const vy1 = p1.y - p0.y;
+    const vx2 = p2.x - p1.x;
+    const vy2 = p2.y - p1.y;
+
+    const len1 = Math.hypot(vx1, vy1);
+    const len2 = Math.hypot(vx2, vy2);
+
+    if (!len1 || !len2){
+      d += ` L ${p1.x} ${p1.y}`;
+      continue;
+    }
+
+    const r = Math.min(radius, len1 / 2, len2 / 2);
+    const inX = p1.x - (vx1 / len1) * r;
+    const inY = p1.y - (vy1 / len1) * r;
+    const outX = p1.x + (vx2 / len2) * r;
+    const outY = p1.y + (vy2 / len2) * r;
+
+    d += ` L ${inX} ${inY} Q ${p1.x} ${p1.y} ${outX} ${outY}`;
+  }
+
+  const last = points[points.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return d;
+}
+
+function pathSoft(points){
+  if (points.length < 2) return '';
+  if (points.length === 2){
+    const a = points[0], b = points[1];
+    const dx = Math.abs(b.x - a.x) * 0.5;
+    return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+  }
+
+  const start = points[0];
+  const end = points[points.length - 1];
+  const midA = points[Math.floor((points.length - 1) / 2)];
+  const midB = points[Math.ceil((points.length - 1) / 2)];
+  return `M ${start.x} ${start.y} C ${midA.x} ${start.y}, ${midB.x} ${end.y}, ${end.x} ${end.y}`;
+}
+
+function polylinePointsForEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, edgeIndex=0){
+  let startSide = 'bottom';
+  let endSide = 'top';
+
+  if (edge.kind === 'yes'){
+    startSide = 'right';
+    endSide = 'top';
+  } else if (edge.kind === 'no'){
+    startSide = 'left';
+    endSide = 'top';
+  } else if (edge.kind === 'merge'){
+    startSide = 'bottom';
+    endSide = 'top';
+  } else if (fromNode.type === 'signal'){
+    startSide = 'right';
+    endSide = 'left';
+  } else if (toNode.type === 'return'){
+    startSide = 'bottom';
+    endSide = 'top';
+  }
+
+  const a = portFor(fromNode, fromPos, colW, nodeH, startSide);
+  const b = portFor(toNode, toPos, colW, nodeH, endSide);
+
+  const detour = clampSpacing(state.noodleDetour, state.noodleHard);
+  const sep = state.noodleSeparation * (edgeIndex % 2 === 0 ? 1 : -1);
+  const extra = sep + (edgeIndex * 3);
+
+  let points;
+
+  if (state.noodleStyle === 'soft'){
+    if (startSide === 'right'){
+      points = [
+        a,
+        { x: a.x + detour + extra, y: a.y },
+        { x: b.x - detour, y: b.y },
+        b
+      ];
+    } else if (startSide === 'left'){
+      points = [
+        a,
+        { x: a.x - detour + extra, y: a.y },
+        { x: b.x + detour, y: b.y },
+        b
+      ];
+    } else {
+      points = [
+        a,
+        { x: a.x, y: a.y + detour / 2 + extra },
+        { x: b.x, y: b.y - detour / 2 },
+        b
+      ];
+    }
+  } else {
+    let midX = a.x;
+    let firstY = a.y;
+    let lastY = b.y;
+
+    if (edge.kind === 'yes'){
+      midX = a.x + detour + extra;
+    } else if (edge.kind === 'no'){
+      midX = a.x - detour + extra;
+    } else if (fromNode.type === 'signal'){
+      midX = Math.max(a.x + detour + extra, (a.x + b.x) / 2 + detour * 0.35);
+    } else {
+      midX = a.x + extra;
+    }
+
+    if (startSide === 'bottom' && endSide === 'top'){
+      const midY = (a.y + b.y) / 2;
+      points = [
+        a,
+        { x: a.x, y: midY + extra * 0.2 },
+        { x: b.x, y: midY + extra * 0.2 },
+        b
+      ];
+    } else {
+      points = [
+        a,
+        { x: midX, y: a.y },
+        { x: midX, y: b.y },
+        b
+      ];
+    }
+  }
+
+  return { a, b, points, startSide, endSide };
+}
+
+function pathForPoints(points){
+  if (state.noodleStyle === 'rounded') return pathRounded(points, 14);
+  if (state.noodleStyle === 'soft') return pathSoft(points);
+  return pathOrthogonal(points);
+}
+
+function drawPort(x,y,color){
+  if (!state.showPorts || state.portSize <= 0) return '';
+  const r = state.portSize;
+  return `
+    <circle cx="${x}" cy="${y}" r="${r + 2}" fill="#000" opacity="0.35"></circle>
+    <circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="rgba(255,255,255,.45)" stroke-width="1.2"></circle>
+  `;
+}
+
+function drawOrthogonalEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, edgeIndex=0){
+  const stroke = edgeColor(edge, fromNode, toNode);
+  const width = Number(state.lineThickness);
+  const { a, b, points } = polylinePointsForEdge(fromNode, toNode, fromPos, toPos, edge, colW, nodeH, edgeIndex);
+  const path = pathForPoints(points);
+
+  const outline = state.showOutlines
+    ? `<path d="${path}" fill="none" stroke="#000" stroke-width="${width + 2.4}" opacity="0.42" stroke-linecap="round" stroke-linejoin="round" />`
+    : '';
+
+  const main = `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" />`;
+
+  let label = '';
+  if (edge.label){
+    const lx = edge.kind === 'yes'
+      ? a.x + 16
+      : edge.kind === 'no'
+      ? a.x - 34
+      : (a.x + b.x) / 2 + 8;
+
+    const ly = edge.kind === 'yes' || edge.kind === 'no'
+      ? a.y - 8
+      : (a.y + b.y) / 2 - 6;
+
+    label = `<text x="${lx}" y="${ly}" font-size="11" fill="${stroke}" font-weight="700">${escapeXml(edge.label)}</text>`;
+  }
+
+  return outline + main + drawPort(a.x, a.y, stroke) + drawPort(b.x, b.y, stroke) + label;
+}
+
+function drawCrossLink(x1,y1,x2,y2,label,color='#7eb5ff'){
+  const lift = Math.min(y1,y2) - clampSpacing(state.crossLift, 8);
+  const points = [
+    {x:x1,y:y1},
+    {x:x1 + 18,y:y1},
+    {x:x1 + 18,y:lift},
+    {x:x2 - 18,y:lift},
+    {x:x2 - 18,y:y2},
+    {x:x2,y:y2}
+  ];
+  const d = state.noodleStyle === 'rounded' ? pathRounded(points, 12) : pathOrthogonal(points);
+
+  const outline = state.showOutlines
+    ? `<path d="${d}" fill="none" stroke="#000" stroke-width="${state.lineThickness + 2.2}" opacity="0.34" stroke-linecap="round" stroke-linejoin="round" />`
+    : '';
+
+  return `
+    ${outline}
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="${state.lineThickness + 0.2}" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5" />
+    <polygon points="${x2},${y2} ${x2-9},${y2-5} ${x2-9},${y2+5}" fill="${color}" />
+    ${drawPort(x1, y1, color)}
+    ${drawPort(x2, y2, color)}
+    ${label ? `<text x="${(x1+x2)/2}" y="${lift - 6}" font-size="11" fill="${color}" font-weight="700">${escapeXml(label)}</text>` : ''}
+  `;
+}
 
 function renderFlowSvg(script){
-  const fontSize=state.fontSize, margin=30, treeGap=state.treeSpacing + (state.showCrossLinks ? 80 : 0), laneGap=Math.max(70, state.hSpacing * 0.82), colW=state.boxWidth, nodeH=state.boxHeight, boxRadius=state.squareBoxes ? 8 : 16;
-  const width=Math.max(1800, margin * 2 + script.functions.length * (colW + treeGap) + 120);
-  const perRow=Math.max(1, Math.floor((width - margin * 2) / (colW + treeGap)));
-  let content='', y=margin;
-  const functionAnchors=new Map();
+  const fontSize = state.fontSize;
+  const margin = 34;
 
-  script.functions.forEach((fn, fnIndex) => {
-    const x=margin + (fnIndex % perRow) * (colW + treeGap); if (fnIndex > 0 && fnIndex % perRow === 0) y += 220;
-    const localY=y + 34, positions=new Map();
-    functionAnchors.set(fn.name, { x, y: localY });
-    content += `<text x="${x}" y="${y}" font-size="18" font-weight="700" fill="#f1f3f5">${escapeXml(fn.name)}()</text>`;
-    content += `<text x="${x}" y="${y + 18}" font-size="11" fill="#aab2bd">line ${fn.startLine + 1}${fn.returns ? ' → ' + escapeXml(fn.returns) : ''}</text>`;
-    fn.graph.nodes.forEach(node => { positions.set(node.id, { x:x + (node.lane || 0) * laneGap, y:localY + (node.row || 0) * (nodeH + state.vSpacing) }); });
-    fn._positions=positions;
-    fn.graph.edges.forEach(edge => { const a=positions.get(edge.from), b=positions.get(edge.to); if (!a || !b) return; const showLabel=state.showEdgeLabels || edge.label === 'merge'; content += drawArrow(a.x + colW/2, a.y + nodeH, b.x + colW/2, b.y, showLabel ? edge.label : ''); });
-    fn.graph.nodes.forEach(node => { const p=positions.get(node.id), pal=nodePalette(node.type); content += roundedRect(p.x,p.y,colW,nodeH,boxRadius,pal.fill,pal.stroke,1.4); const lines=wrapTextByBox(node.label, colW, nodeH, fontSize); lines.forEach((line, idx) => { const yPos=p.y + 20 + idx * (fontSize + 4); content += `<text x="${p.x + 14}" y="${yPos}" font-size="${idx === 0 ? fontSize : Math.max(10,fontSize - 1)}" font-weight="${idx === 0 ? 700 : 500}" fill="${pal.text}" opacity="${idx === 0 ? 1 : 0.92}">${escapeXml(line)}</text>`; }); content += `<text x="${p.x + colW - 46}" y="${p.y + 20}" font-size="10" fill="${pal.text}" opacity="0.82">L${node.line ?? ''}</text>`; });
+  const laneGap = clampSpacing(state.hSpacing, state.hSpacingHard);
+  const treeGap = clampSpacing(state.treeSpacing, state.treeSpacingHard) + (state.showCrossLinks ? 110 : 0);
+  const colW = state.boxWidth;
+  const nodeH = state.boxHeight;
+  const boxRadius = state.squareBoxes ? 8 : 16;
+  const rowGap = clampSpacing(state.vSpacing, state.vSpacingHard);
+
+  let contentBoxes = '';
+  let contentEdges = '';
+  let contentCross = '';
+
+  let y = margin;
+  let maxRight = 0;
+  const functionAnchors = new Map();
+  const treeLayouts = [];
+  const rowMaxWidth = 5200;
+
+  script.functions.forEach(fn => {
+    const lanes = fn.graph.nodes.map(n => n.lane || 0);
+    const maxLane = lanes.length ? Math.max(...lanes) : 0;
+    const minLane = lanes.length ? Math.min(...lanes) : 0;
+    const laneSpan = maxLane - minLane;
+    const treeWidth = colW + laneSpan * laneGap;
+    const treeHeight = (Math.max(0, ...fn.graph.nodes.map(n => n.row || 0)) + 1) * (nodeH + rowGap + 4);
+    treeLayouts.push({ fn, minLane, maxLane, treeWidth, treeHeight });
+  });
+
+  let cursorX = margin;
+  let currentRowHeight = 0;
+
+  treeLayouts.forEach((layout, idx) => {
+    if (idx > 0 && cursorX + layout.treeWidth + margin > rowMaxWidth){
+      cursorX = margin;
+      y += currentRowHeight + 140;
+      currentRowHeight = 0;
+    }
+    layout.baseX = cursorX - layout.minLane * laneGap;
+    layout.baseY = y + 42;
+    cursorX += layout.treeWidth + treeGap;
+    currentRowHeight = Math.max(currentRowHeight, layout.treeHeight);
+    maxRight = Math.max(maxRight, layout.baseX + layout.treeWidth);
+  });
+
+  treeLayouts.forEach(layout => {
+    const fn = layout.fn;
+    const x = layout.baseX;
+    const localY = layout.baseY;
+    const positions = new Map();
+    const nodeMap = new Map();
+
+    functionAnchors.set(fn.name, { x, y: localY, layout });
+
+    contentBoxes += `<text x="${x}" y="${localY - 40}" font-size="18" font-weight="700" fill="#f1f3f5">${escapeXml(fn.name)}()</text>`;
+    contentBoxes += `<text x="${x}" y="${localY - 20}" font-size="11" fill="#aab2bd">line ${fn.startLine + 1}${fn.returns ? ' → ' + escapeXml(fn.returns) : ''}</text>`;
+
+    fn.graph.nodes.forEach(node => {
+      const px = x + (node.lane || 0) * laneGap;
+      const py = localY + (node.row || 0) * (nodeH + rowGap);
+      positions.set(node.id, { x:px, y:py });
+      nodeMap.set(node.id, node);
+      maxRight = Math.max(maxRight, px + colW);
+    });
+
+    fn._positions = positions;
+    fn._nodeMap = nodeMap;
+
+    fn.graph.edges.forEach((edge, edgeIndex) => {
+      const fromNode = nodeMap.get(edge.from);
+      const toNode = nodeMap.get(edge.to);
+      const a = positions.get(edge.from);
+      const b = positions.get(edge.to);
+      if (!fromNode || !toNode || !a || !b) return;
+      contentEdges += drawOrthogonalEdge(fromNode, toNode, a, b, edge, colW, nodeH, edgeIndex);
+    });
+
+    fn.graph.nodes.forEach(node => {
+      const p = positions.get(node.id);
+      const pal = nodePalette(node.type);
+
+      contentBoxes += roundedRect(p.x, p.y, colW, nodeH, boxRadius, pal.fill, pal.stroke, 1.4);
+
+      const lines = wrapTextByBox(node.label, colW, nodeH, fontSize);
+      lines.forEach((line, idx) => {
+        const yPos = p.y + 20 + idx * (fontSize + 4);
+        contentBoxes += `<text x="${p.x + 14}" y="${yPos}" font-size="${idx === 0 ? fontSize : Math.max(10,fontSize - 1)}" font-weight="${idx === 0 ? 700 : 500}" fill="${pal.text}" opacity="${idx === 0 ? 1 : 0.92}">${escapeXml(line)}</text>`;
+      });
+
+      contentBoxes += `<text x="${p.x + colW - 46}" y="${p.y + 20}" font-size="10" fill="${pal.text}" opacity="0.82">L${node.line ?? ''}</text>`;
+    });
   });
 
   if (state.showCrossLinks){
-    script.functions.forEach(fn => {
+    treeLayouts.forEach(layout => {
+      const fn = layout.fn;
       fn.graph.crossLinks.forEach(link => {
         const fromPos = fn._positions.get(link.from);
+        const fromNode = fn._nodeMap.get(link.from);
         const targetAnchor = functionAnchors.get(link.toFunction);
-        if (!fromPos || !targetAnchor) return;
-        content += drawArrow(fromPos.x + colW, fromPos.y + nodeH/2, targetAnchor.x, targetAnchor.y + 18, link.toFunction, '#7eb5ff', 2.5);
+        if (!fromPos || !fromNode || !targetAnchor) return;
+        const start = portFor(fromNode, fromPos, colW, nodeH, 'right');
+        const end = { x: targetAnchor.x, y: targetAnchor.y + 18 };
+        maxRight = Math.max(maxRight, start.x, end.x);
+        contentCross += drawCrossLink(start.x, start.y, end.x, end.y, link.toFunction);
       });
     });
   }
 
-  const maxRow=Math.max(3, ...script.functions.flatMap(fn => fn.graph.nodes.map(n => n.row || 0)));
-  const rows=Math.ceil(Math.max(1, script.functions.length) / perRow);
-  const height=margin * 2 + rows * (120 + (maxRow + 1) * (nodeH + state.vSpacing) + 100);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.28" /></filter></defs><rect width="100%" height="100%" fill="#16181b" /><g filter="url(#shadow)">${content}</g></svg>`;
+  const maxBottom = Math.max(...treeLayouts.map(layout => layout.baseY + layout.treeHeight), margin + 600);
+  const width = Math.max(1900, maxRight + margin + 180);
+  const height = maxBottom + 120;
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.28" />
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" fill="#16181b" />
+      <g>${contentEdges}${contentCross}</g>
+      <g filter="url(#shadow)">${contentBoxes}</g>
+    </svg>
+  `;
 }
 
-function renderCallGraphSvg(script){ const width=1320, margin=40, colW=220, rowH=100, cols=Math.max(1, Math.floor((width - margin*2) / (colW + 40))); const positions=new Map(); let content=`<text x="${margin}" y="30" font-size="22" font-weight="700" fill="#f1f3f5">${escapeXml(script.name)} — function call graph</text>`; script.functions.forEach((fn,i) => { const col=i % cols, row=Math.floor(i / cols), x=margin + col * (colW + 40), y=60 + row * rowH; positions.set(fn.name,{x,y}); }); script.functions.forEach(fn => { const a=positions.get(fn.name); fn.calls.forEach(target => { const b=positions.get(target); if (!a || !b) return; content += drawArrow(a.x + colW/2, a.y + 54, b.x + colW/2, b.y, 'calls'); }); }); script.functions.forEach(fn => { const p=positions.get(fn.name), fill=fn.name.startsWith('_') ? '#5b4a16' : '#1f4a33', stroke=fn.name.startsWith('_') ? '#ffd166' : '#58c27d'; content += roundedRect(p.x,p.y,colW,56,state.squareBoxes ? 8 : 16,fill,stroke,1.5); content += `<text x="${p.x + 14}" y="${p.y + 23}" font-size="15" font-weight="700" fill="#f5f7fa">${escapeXml(fn.name)}()</text>`; content += `<text x="${p.x + 14}" y="${p.y + 40}" font-size="11" fill="#d5dde7">${fn.calls.length} outgoing call${fn.calls.length === 1 ? '' : 's'}</text>`; }); const rows=Math.ceil(Math.max(1, script.functions.length) / cols), height=Math.max(260, 80 + rows * rowH + 60); return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#16181b" />${content}</svg>`; }
+function renderCallGraphSvg(script){
+  const width = 1320;
+  const margin = 40;
+  const colW = 220;
+  const rowH = 100;
+  const cols = Math.max(1, Math.floor((width - margin*2) / (colW + 40)));
+  const positions = new Map();
+  let content = `<text x="${margin}" y="30" font-size="22" font-weight="700" fill="#f1f3f5">${escapeXml(script.name)} — function call graph</text>`;
 
-function getSelectedScript(){ return state.files.find(f => f.id === state.selectedId) || null; }
-function currentSvgString(){ const script=getSelectedScript(); if (!script) return ''; return state.mode === 'calls' ? renderCallGraphSvg(script) : renderFlowSvg(script); }
-function updateReadouts(){ els.fontSizeValue.textContent=state.fontSize; els.vSpacingValue.textContent=state.vSpacing; els.hSpacingValue.textContent=state.hSpacing; els.treeSpacingValue.textContent=state.treeSpacing; els.boxWidthValue.textContent=state.boxWidth; els.boxHeightValue.textContent=state.boxHeight; }
-function renderScriptList(){ els.scriptList.innerHTML=''; if (!state.files.length){ els.scriptList.innerHTML='<div class="hint">No imported scripts yet.</div>'; return; } state.files.forEach(file => { const item=document.createElement('div'); item.className='script-item' + (file.id === state.selectedId ? ' active' : ''); item.innerHTML=`<div class="script-name">${escapeXml(file.name)}</div><div class="script-meta">${file.lines} lines • ${file.functions.length} function${file.functions.length === 1 ? '' : 's'}</div>`; item.addEventListener('click', ()=>{ state.selectedId=file.id; render(); }); els.scriptList.appendChild(item); }); }
-function render(){ const script=getSelectedScript(); updateReadouts(); renderScriptList(); if (!script){ els.diagramTitle.textContent='No script selected'; els.diagramMeta.textContent='Import one or more GDScript files to begin.'; els.canvasArea.innerHTML=''; els.canvasArea.appendChild(els.emptyState); return; } els.diagramTitle.textContent=script.name; els.diagramMeta.textContent=`${script.lines} lines • ${script.functions.length} function${script.functions.length === 1 ? '' : 's'} • ${state.mode === 'calls' ? 'call graph' : 'flow chart'}`; els.canvasArea.innerHTML=currentSvgString(); }
-async function importFiles(fileList){ showError(''); const incoming=Array.from(fileList || []); if (!incoming.length) return; const results=[]; for (const file of incoming){ try{ const code=await readFile(file); results.push(analyzeScript(file.name, code)); }catch(err){ showError(`Could not read ${file.name}: ${err.message || err}`); } } state.files=[...state.files, ...results]; if (!state.selectedId && state.files[0]) state.selectedId=state.files[0].id; if (results[0]) state.selectedId=results[0].id; render(); }
-function exportSvg(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; downloadBlob(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), `${script.name.replace(/\.gd$/i,'')}-${state.mode}.svg`); }
-function exportPng(){ const svg=currentSvgString(), script=getSelectedScript(); if (!svg || !script) return; const img=new Image(), blob=new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob); img.onload=()=>{ const root=new DOMParser().parseFromString(svg,'image/svg+xml').documentElement, w=Number(root.getAttribute('width')) || 1320, h=Number(root.getAttribute('height')) || 900; const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0); canvas.toBlob((pngBlob)=>{ if (pngBlob) downloadBlob(pngBlob, `${script.name.replace(/\.gd$/i,'')}-${state.mode}.png`); URL.revokeObjectURL(url); }, 'image/png'); }; img.onerror=()=>{ showError('PNG export failed.'); URL.revokeObjectURL(url); }; img.src=url; }
-function exportPdf(){ if (!getSelectedScript()) return; window.print(); }
-function fitWidth(){ const svg=els.canvasArea.querySelector('svg'); if (!svg) return; svg.style.width='100%'; svg.style.height='auto'; }
-function clearAll(){ state.files=[]; state.selectedId=null; showError(''); render(); }
+  script.functions.forEach((fn,i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = margin + col * (colW + 40);
+    const y = 60 + row * rowH;
+    positions.set(fn.name,{x,y});
+  });
+
+  script.functions.forEach(fn => {
+    const a = positions.get(fn.name);
+    fn.calls.forEach(target => {
+      const b = positions.get(target);
+      if (!a || !b) return;
+      content += drawCrossLink(a.x + colW, a.y + 28, b.x, b.y + 28, 'calls', '#7eb5ff');
+    });
+  });
+
+  script.functions.forEach(fn => {
+    const p = positions.get(fn.name);
+    const fill = fn.name.startsWith('_') ? '#5b4a16' : '#1f4a33';
+    const stroke = fn.name.startsWith('_') ? '#ffd166' : '#58c27d';
+    content += roundedRect(p.x,p.y,colW,56,state.squareBoxes ? 8 : 16,fill,stroke,1.5);
+    content += `<text x="${p.x + 14}" y="${p.y + 23}" font-size="15" font-weight="700" fill="#f5f7fa">${escapeXml(fn.name)}()</text>`;
+    content += `<text x="${p.x + 14}" y="${p.y + 40}" font-size="11" fill="#d5dde7">${fn.calls.length} outgoing call${fn.calls.length === 1 ? '' : 's'}</text>`;
+  });
+
+  const rows = Math.ceil(Math.max(1, script.functions.length) / cols);
+  const height = Math.max(260, 80 + rows * rowH + 60);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#16181b" />${content}</svg>`;
+}
+
+function getSelectedScript(){
+  return state.files.find(f => f.id === state.selectedId) || null;
+}
+
+function currentSvgString(){
+  const script = getSelectedScript();
+  if (!script) return '';
+  return state.mode === 'calls' ? renderCallGraphSvg(script) : renderFlowSvg(script);
+}
+
+function updateReadouts(){
+  els.fontSizeValue.textContent = state.fontSize;
+
+  els.vSpacingValue.textContent = state.vSpacing;
+  els.vSpacingHardValue.textContent = state.vSpacingHard;
+
+  els.hSpacingValue.textContent = state.hSpacing;
+  els.hSpacingHardValue.textContent = state.hSpacingHard;
+
+  els.treeSpacingValue.textContent = state.treeSpacing;
+  els.treeSpacingHardValue.textContent = state.treeSpacingHard;
+
+  els.noodleDetourValue.textContent = state.noodleDetour;
+  els.noodleHardValue.textContent = state.noodleHard;
+  els.noodleSeparationValue.textContent = state.noodleSeparation;
+  els.lineThicknessValue.textContent = Number(state.lineThickness).toFixed(1);
+  els.portSizeValue.textContent = state.portSize;
+  els.crossLiftValue.textContent = state.crossLift;
+
+  els.boxWidthValue.textContent = state.boxWidth;
+  els.boxHeightValue.textContent = state.boxHeight;
+}
+
+function renderScriptList(){
+  els.scriptList.innerHTML = '';
+  if (!state.files.length){
+    els.scriptList.innerHTML = '<div class="hint">No imported scripts yet.</div>';
+    return;
+  }
+
+  state.files.forEach(file => {
+    const item = document.createElement('div');
+    item.className = 'script-item' + (file.id === state.selectedId ? ' active' : '');
+    item.innerHTML = `<div class="script-name">${escapeXml(file.name)}</div><div class="script-meta">${file.lines} lines • ${file.functions.length} function${file.functions.length === 1 ? '' : 's'}</div>`;
+    item.addEventListener('click', () => {
+      state.selectedId = file.id;
+      render();
+    });
+    els.scriptList.appendChild(item);
+  });
+}
+
+function render(){
+  const script = getSelectedScript();
+  updateReadouts();
+  renderScriptList();
+
+  if (!script){
+    els.diagramTitle.textContent = 'No script selected';
+    els.diagramMeta.textContent = 'Import one or more GDScript files to begin.';
+    els.canvasArea.innerHTML = '';
+    els.canvasArea.appendChild(els.emptyState);
+    return;
+  }
+
+  els.diagramTitle.textContent = script.name;
+  els.diagramMeta.textContent = `${script.lines} lines • ${script.functions.length} function${script.functions.length === 1 ? '' : 's'} • ${state.mode === 'calls' ? 'call graph' : 'flow chart'}`;
+  els.canvasArea.innerHTML = `<div class="svg-host">${currentSvgString()}</div>`;
+}
+
+async function importFiles(fileList){
+  showError('');
+  const incoming = Array.from(fileList || []);
+  if (!incoming.length) return;
+
+  const results = [];
+  for (const file of incoming){
+    try{
+      const code = await readFile(file);
+      results.push(analyzeScript(file.name, code));
+    }catch(err){
+      showError(`Could not read ${file.name}: ${err.message || err}`);
+    }
+  }
+
+  state.files = [...state.files, ...results];
+  if (!state.selectedId && state.files[0]) state.selectedId = state.files[0].id;
+  if (results[0]) state.selectedId = results[0].id;
+  render();
+}
+
+function exportSvg(){
+  const svg = currentSvgString();
+  const script = getSelectedScript();
+  if (!svg || !script) return;
+  downloadBlob(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), `${script.name.replace(/\.gd$/i,'')}-${state.mode}.svg`);
+}
+
+function exportPng(){
+  const svg = currentSvgString();
+  const script = getSelectedScript();
+  if (!svg || !script) return;
+
+  const img = new Image();
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+
+  img.onload = () => {
+    const root = new DOMParser().parseFromString(svg,'image/svg+xml').documentElement;
+    const w = Number(root.getAttribute('width')) || 1320;
+    const h = Number(root.getAttribute('height')) || 900;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img,0,0);
+    canvas.toBlob((pngBlob) => {
+      if (pngBlob) downloadBlob(pngBlob, `${script.name.replace(/\.gd$/i,'')}-${state.mode}.png`);
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  };
+
+  img.onerror = () => {
+    showError('PNG export failed.');
+    URL.revokeObjectURL(url);
+  };
+
+  img.src = url;
+}
+
+function exportPdf(){
+  const svg = currentSvgString();
+  const script = getSelectedScript();
+  if (!svg || !script) return;
+
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+
+  img.onload = () => {
+    const root = new DOMParser().parseFromString(svg,'image/svg+xml').documentElement;
+    const w = Number(root.getAttribute('width')) || 1320;
+    const h = Number(root.getAttribute('height')) || 900;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img,0,0);
+    const pngUrl = canvas.toDataURL('image/png');
+
+    const win = window.open('', '_blank');
+    if (!win){
+      showError('Popup blocked. Allow popups for PDF export.');
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    win.document.write(`<!doctype html><html><head><title>${escapeXml(script.name)}</title><style>@page{size:auto;margin:10mm}html,body{margin:0;padding:0;background:#fff}img{display:block;width:100%;height:auto;page-break-inside:avoid}</style></head><body><img src="${pngUrl}" alt="diagram" /><script>window.onload=()=>setTimeout(()=>window.print(),150);<\/script></body></html>`);
+    win.document.close();
+    URL.revokeObjectURL(url);
+  };
+
+  img.onerror = () => {
+    showError('PDF export failed.');
+    URL.revokeObjectURL(url);
+  };
+
+  img.src = url;
+}
+
+function fitWidth(){
+  const svg = els.canvasArea.querySelector('svg');
+  if (!svg) return;
+  svg.style.width = '100%';
+  svg.style.height = 'auto';
+}
+
+function clearAll(){
+  state.files = [];
+  state.selectedId = null;
+  showError('');
+  render();
+}
+
+function bindRange(rangeEl, key, parser = Number){
+  rangeEl.addEventListener('input', e => {
+    state[key] = parser(e.target.value);
+    render();
+  });
+}
 
 els.fileInput.addEventListener('change', e => importFiles(e.target.files));
-els.loadDemoBtn.addEventListener('click', ()=>{ const demo=analyzeScript('demo_player.gd', demoScript); state.files=[demo, ...state.files]; state.selectedId=demo.id; render(); });
-els.exportSvgBtn.addEventListener('click', exportSvg); els.exportPdfBtn.addEventListener('click', exportPdf); els.clearBtn.addEventListener('click', clearAll); els.fitBtn.addEventListener('click', fitWidth); els.pngBtn.addEventListener('click', exportPng);
-els.modeSelect.addEventListener('change', e => { state.mode=e.target.value; render(); }); els.fontSizeRange.addEventListener('input', e => { state.fontSize=Number(e.target.value); render(); }); els.vSpacingRange.addEventListener('input', e => { state.vSpacing=Number(e.target.value); render(); }); els.hSpacingRange.addEventListener('input', e => { state.hSpacing=Number(e.target.value); render(); }); els.treeSpacingRange.addEventListener('input', e => { state.treeSpacing=Number(e.target.value); render(); }); els.boxWidthRange.addEventListener('input', e => { state.boxWidth=Number(e.target.value); render(); }); els.boxHeightRange.addEventListener('input', e => { state.boxHeight=Number(e.target.value); render(); }); els.squareCheckbox.addEventListener('change', e => { state.squareBoxes=e.target.checked; render(); }); els.mergeCheckbox.addEventListener('change', e => { state.showMergeNodes=e.target.checked; render(); }); els.edgeLabelsCheckbox.addEventListener('change', e => { state.showEdgeLabels=e.target.checked; render(); }); els.crossLinksCheckbox.addEventListener('change', e => { state.showCrossLinks=e.target.checked; render(); });
-['dragenter','dragover'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); document.body.style.outline='2px solid rgba(240,140,43,.65)'; })); ['dragleave','drop'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); document.body.style.outline='none'; })); window.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) importFiles(e.dataTransfer.files); });
+
+els.loadDemoBtn.addEventListener('click', () => {
+  const demo = analyzeScript('demo_player.gd', demoScript);
+  state.files = [demo, ...state.files];
+  state.selectedId = demo.id;
+  render();
+});
+
+els.exportSvgBtn.addEventListener('click', exportSvg);
+els.exportPngBtn.addEventListener('click', exportPng);
+els.exportPdfBtn.addEventListener('click', exportPdf);
+els.clearBtn.addEventListener('click', clearAll);
+els.fitBtn.addEventListener('click', fitWidth);
+
+els.modeSelect.addEventListener('change', e => { state.mode = e.target.value; render(); });
+els.noodleStyleSelect.addEventListener('change', e => { state.noodleStyle = e.target.value; render(); });
+
+bindRange(els.fontSizeRange, 'fontSize');
+bindRange(els.vSpacingRange, 'vSpacing');
+bindRange(els.vSpacingHardRange, 'vSpacingHard');
+bindRange(els.hSpacingRange, 'hSpacing');
+bindRange(els.hSpacingHardRange, 'hSpacingHard');
+bindRange(els.treeSpacingRange, 'treeSpacing');
+bindRange(els.treeSpacingHardRange, 'treeSpacingHard');
+bindRange(els.noodleDetourRange, 'noodleDetour');
+bindRange(els.noodleHardRange, 'noodleHard');
+bindRange(els.noodleSeparationRange, 'noodleSeparation');
+bindRange(els.lineThicknessRange, 'lineThickness', parseFloat);
+bindRange(els.portSizeRange, 'portSize');
+bindRange(els.crossLiftRange, 'crossLift');
+bindRange(els.boxWidthRange, 'boxWidth');
+bindRange(els.boxHeightRange, 'boxHeight');
+
+els.squareCheckbox.addEventListener('change', e => { state.squareBoxes = e.target.checked; render(); });
+els.mergeCheckbox.addEventListener('change', e => { state.showMergeNodes = e.target.checked; render(); });
+els.crossLinksCheckbox.addEventListener('change', e => { state.showCrossLinks = e.target.checked; render(); });
+els.portsCheckbox.addEventListener('change', e => { state.showPorts = e.target.checked; render(); });
+els.outlinesCheckbox.addEventListener('change', e => { state.showOutlines = e.target.checked; render(); });
+
+function isFileDragEvent(e){
+  const types = e.dataTransfer?.types;
+  if (!types) return false;
+  return Array.from(types).includes('Files');
+}
+
+['dragenter','dragover'].forEach(type => {
+  window.addEventListener(type, e => {
+    if (!isFileDragEvent(e)) return;
+    e.preventDefault();
+    document.body.classList.add('dragging');
+  });
+});
+
+['dragleave','dragend','drop'].forEach(type => {
+  window.addEventListener(type, e => {
+    e.preventDefault();
+    document.body.classList.remove('dragging');
+  });
+});
+
+window.addEventListener('drop', e => {
+  if (e.dataTransfer?.files?.length){
+    importFiles(e.dataTransfer.files);
+  }
+});
+
 render();
 </script>
 </body>
