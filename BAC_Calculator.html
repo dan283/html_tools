@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BAC Calculator</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #171b24;
+      --panel-2: #1e2430;
+      --text: #edf2f7;
+      --muted: #9aa4b2;
+      --accent: #f59e0b;
+      --accent-2: #fb7185;
+      --good: #22c55e;
+      --bad: #ef4444;
+      --line: rgba(255,255,255,0.08);
+      --shadow: 0 20px 50px rgba(0,0,0,0.35);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(245,158,11,0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(251,113,133,0.12), transparent 30%),
+        linear-gradient(180deg, #0b0d12, var(--bg));
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      background-color: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-inner { padding: 24px; }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.05;
+      margin-bottom: 10px;
+      letter-spacing: -0.03em;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+      max-width: 60ch;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      color: #d7dde7;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+
+    .hero-side {
+      background: linear-gradient(160deg, rgba(245,158,11,0.10), rgba(251,113,133,0.06));
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .status-panel {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 8px;
+    }
+
+    .bac-value {
+      font-size: clamp(42px, 7vw, 68px);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .bac-desc {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      margin-bottom: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input, select, button {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 14px 14px;
+      font-size: 15px;
+      outline: none;
+      transition: 160ms ease;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(245,158,11,0.6);
+      box-shadow: 0 0 0 4px rgba(245,158,11,0.14);
+    }
+
+    .drink-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .drink-row {
+      display: grid;
+      grid-template-columns: 1.1fr 0.8fr 0.8fr 0.8fr;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.025);
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .drink-name {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .drink-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .pill {
+      text-align: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      padding: 10px 8px;
+      border-radius: 12px;
+      font-size: 13px;
+      color: #d4dce7;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #f59e0b, #ea8b00);
+      color: #1c1202;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .btn-primary:hover, .btn-secondary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .stat .k {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 8px;
+    }
+
+    .stat .v {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .stat .small {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+
+    .timeline {
+      margin-top: 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--line);
+      padding: 16px;
+    }
+
+    .bar {
+      height: 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444);
+      transition: width 250ms ease;
+    }
+
+    .foot {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 18px;
+    }
+
+    .warning {
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.24);
+      color: #ffd5d5;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 900px) {
+      .hero, .grid, .form-grid { grid-template-columns: 1fr; }
+      .drink-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 14px; }
+      .card-inner { padding: 18px; }
+      .drink-row { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="card">
+        <div class="card-inner">
+          <h1>BAC Calculator</h1>
+          <p class="sub">
+            Estimate blood alcohol concentration using body weight, sex, drink counts, and elapsed time since you started drinking.
+            Update beer, wine, or spirits counts at any time and the countdown to 0.000 BAC updates instantly.
+          </p>
+          <div class="badges">
+            <div class="badge">Beer: 5% / 500 mL</div>
+            <div class="badge">Wine: 14% / 150 mL</div>
+            <div class="badge">Spirits: 40% / 40 mL</div>
+            <div class="badge">Live countdown</div>
+          </div>
+          <div class="warning">
+            This is only an estimate. Do not use this to decide whether it is safe or legal to drive, work, or operate machinery.
+          </div>
+        </div>
+      </div>
+
+      <div class="card hero-side">
+        <div class="card-inner status-panel">
+          <div>
+            <div class="label">Current estimated BAC</div>
+            <div class="bac-value" id="bacValue">0.000</div>
+            <div class="bac-desc" id="bacDescription">Enter your details and press Start Drinking to begin the timer.</div>
+          </div>
+
+          <div>
+            <div class="label">Countdown to 0.000</div>
+            <div class="bac-value" style="font-size: clamp(28px, 5vw, 44px);" id="countdown">00:00:00</div>
+            <div class="bac-desc" id="startedAtText">Session not started yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-inner">
+          <h2 class="section-title">Personal info</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="weight">Body weight (kg)</label>
+              <input id="weight" type="number" min="20" max="300" step="0.1" value="80" />
+            </div>
+            <div class="field">
+              <label for="sex">Sex</label>
+              <select id="sex">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="btn-primary" id="startBtn">Start Drinking</button>
+            <button class="btn-secondary" id="resetBtn">Reset Session</button>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="k">Time elapsed</div>
+              <div class="v" id="elapsed">00:00:00</div>
+              <div class="small">Starts counting from the moment you press Start Drinking.</div>
+            </div>
+            <div class="stat">
+              <div class="k">Pure alcohol consumed</div>
+              <div class="v" id="gramsAlcohol">0.0 g</div>
+              <div class="small">Calculated from drink volume × alcohol percentage × density of ethanol.</div>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <div class="label">BAC reduction progress</div>
+            <div class="bar"><div class="bar-fill" id="progressBar"></div></div>
+            <div class="foot" id="timelineText">Press Start Drinking to begin tracking.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-inner">
+          <h2 class="section-title">Drinks</h2>
+          <div class="drink-list">
+            <div class="drink-row">
+              <div>
+                <div class="drink-name">Beer</div>
+                <div class="drink-meta">5% alcohol, 500 mL each</div>
+              </div>
+              <div class="pill">ABV: 5%</div>
+              <div class="pill">Volume: 500 mL</div>
+              <select id="beerQty"></select>
+            </div>
+
+            <div class="drink-row">
+              <div>
+                <div class="drink-name">Wine</div>
+                <div class="drink-meta">14% alcohol, 150 mL each</div>
+              </div>
+              <div class="pill">ABV: 14%</div>
+              <div class="pill">Volume: 150 mL</div>
+              <select id="wineQty"></select>
+            </div>
+
+            <div class="drink-row">
+              <div>
+                <div class="drink-name">Spirits</div>
+                <div class="drink-meta">40% alcohol, 40 mL each</div>
+              </div>
+              <div class="pill">ABV: 40%</div>
+              <div class="pill">Volume: 40 mL</div>
+              <select id="spiritsQty"></select>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="k">Estimated time to zero</div>
+              <div class="v" id="hoursToZero">0h 0m</div>
+              <div class="small">Based on a rough elimination rate of 0.015 BAC per hour.</div>
+            </div>
+            <div class="stat">
+              <div class="k">Formula notes</div>
+              <div class="small">
+                Uses a Widmark-style estimate with body water constant<br>
+                Male r = 0.68, Female r = 0.55<br>
+                BAC decreases over time after the session starts.
+              </div>
+            </div>
+          </div>
+
+          <div class="foot">
+            Assumptions here are simplified. Real BAC depends on many factors including food, timing, metabolism, medications, hydration, body composition, and drink pour accuracy.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ETHANOL_DENSITY = 0.789; // g/mL
+    const ELIMINATION_RATE = 0.015; // BAC per hour
+    const SEX_R = {
+      male: 0.68,
+      female: 0.55,
+    };
+
+    const DRINKS = {
+      beer: { abv: 0.05, ml: 500 },
+      wine: { abv: 0.14, ml: 150 },
+      spirits: { abv: 0.40, ml: 40 },
+    };
+
+    const els = {
+      weight: document.getElementById('weight'),
+      sex: document.getElementById('sex'),
+      beerQty: document.getElementById('beerQty'),
+      wineQty: document.getElementById('wineQty'),
+      spiritsQty: document.getElementById('spiritsQty'),
+      startBtn: document.getElementById('startBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      bacValue: document.getElementById('bacValue'),
+      bacDescription: document.getElementById('bacDescription'),
+      countdown: document.getElementById('countdown'),
+      startedAtText: document.getElementById('startedAtText'),
+      elapsed: document.getElementById('elapsed'),
+      gramsAlcohol: document.getElementById('gramsAlcohol'),
+      hoursToZero: document.getElementById('hoursToZero'),
+      progressBar: document.getElementById('progressBar'),
+      timelineText: document.getElementById('timelineText'),
+    };
+
+    let sessionStart = null;
+    let timer = null;
+    let initialBacAtStart = 0;
+
+    function fillQuantitySelect(select, max = 20) {
+      for (let i = 0; i <= max; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Quantity: ${i}`;
+        select.appendChild(option);
+      }
+    }
+
+    [els.beerQty, els.wineQty, els.spiritsQty].forEach(sel => fillQuantitySelect(sel));
+
+    function gramsFromDrink(count, drink) {
+      return count * drink.ml * drink.abv * ETHANOL_DENSITY;
+    }
+
+    function getTotalAlcoholGrams() {
+      const beer = Number(els.beerQty.value || 0);
+      const wine = Number(els.wineQty.value || 0);
+      const spirits = Number(els.spiritsQty.value || 0);
+
+      return (
+        gramsFromDrink(beer, DRINKS.beer) +
+        gramsFromDrink(wine, DRINKS.wine) +
+        gramsFromDrink(spirits, DRINKS.spirits)
+      );
+    }
+
+    function getElapsedHours() {
+      if (!sessionStart) return 0;
+      return (Date.now() - sessionStart) / 3600000;
+    }
+
+    function calculateRawBAC() {
+      const weightKg = Math.max(20, Number(els.weight.value) || 0);
+      const sex = els.sex.value;
+      const r = SEX_R[sex] || SEX_R.male;
+      const alcoholGrams = getTotalAlcoholGrams();
+      const bodyWeightGrams = weightKg * 1000;
+
+      if (!bodyWeightGrams || !r) return 0;
+
+      return (alcoholGrams / (bodyWeightGrams * r)) * 100;
+    }
+
+    function calculateCurrentBAC() {
+      const rawBAC = calculateRawBAC();
+      const elapsed = getElapsedHours();
+      return Math.max(0, rawBAC - elapsed * ELIMINATION_RATE);
+    }
+
+    function formatHMS(totalSeconds) {
+      const s = Math.max(0, Math.floor(totalSeconds));
+      const hours = Math.floor(s / 3600);
+      const minutes = Math.floor((s % 3600) / 60);
+      const seconds = s % 60;
+      return [hours, minutes, seconds].map(v => String(v).padStart(2, '0')).join(':');
+    }
+
+    function formatTimeToZero(hours) {
+      const totalMinutes = Math.max(0, Math.ceil(hours * 60));
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      return `${h}h ${m}m`;
+    }
+
+    function formatStartedAt(ts) {
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function bacStateText(bac) {
+      if (bac <= 0) return 'No alcohol estimated in bloodstream right now.';
+      if (bac < 0.03) return 'Low estimated BAC, but impairment can still exist.';
+      if (bac < 0.06) return 'Mild impairment likely.';
+      if (bac < 0.10) return 'Noticeable impairment likely.';
+      if (bac < 0.20) return 'High impairment likely.';
+      return 'Very high estimated BAC.';
+    }
+
+    function updateUI() {
+      const currentBAC = calculateCurrentBAC();
+      const rawBAC = calculateRawBAC();
+      const alcoholGrams = getTotalAlcoholGrams();
+      const elapsedHours = getElapsedHours();
+      const timeToZeroHours = currentBAC / ELIMINATION_RATE;
+      const countdownSeconds = timeToZeroHours * 3600;
+
+      els.bacValue.textContent = currentBAC.toFixed(3);
+      els.bacDescription.textContent = bacStateText(currentBAC);
+      els.countdown.textContent = formatHMS(countdownSeconds);
+      els.elapsed.textContent = formatHMS(elapsedHours * 3600);
+      els.gramsAlcohol.textContent = `${alcoholGrams.toFixed(1)} g`;
+      els.hoursToZero.textContent = formatTimeToZero(timeToZeroHours);
+
+      if (sessionStart) {
+        els.startedAtText.textContent = `Started at ${formatStartedAt(sessionStart)}`;
+      } else {
+        els.startedAtText.textContent = 'Session not started yet.';
+      }
+
+      const referenceBAC = Math.max(initialBacAtStart, rawBAC, 0.0001);
+      const progress = currentBAC <= 0 ? 100 : Math.min(100, ((referenceBAC - currentBAC) / referenceBAC) * 100);
+      els.progressBar.style.width = `${progress}%`;
+
+      if (!sessionStart) {
+        els.timelineText.textContent = 'Press Start Drinking to begin tracking.';
+      } else if (currentBAC <= 0) {
+        els.timelineText.textContent = 'Estimated BAC has returned to 0.000.';
+      } else {
+        const zeroAt = new Date(Date.now() + countdownSeconds * 1000);
+        els.timelineText.textContent = `Estimated to reach 0.000 around ${zeroAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`;
+      }
+    }
+
+    function startSession() {
+      sessionStart = Date.now();
+      initialBacAtStart = calculateRawBAC();
+      updateUI();
+
+      if (timer) clearInterval(timer);
+      timer = setInterval(updateUI, 1000);
+    }
+
+    function resetSession() {
+      sessionStart = null;
+      initialBacAtStart = 0;
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      els.beerQty.value = '0';
+      els.wineQty.value = '0';
+      els.spiritsQty.value = '0';
+      updateUI();
+    }
+
+    [els.weight, els.sex, els.beerQty, els.wineQty, els.spiritsQty].forEach(el => {
+      el.addEventListener('input', updateUI);
+      el.addEventListener('change', updateUI);
+    });
+
+    els.startBtn.addEventListener('click', startSession);
+    els.resetBtn.addEventListener('click', resetSession);
+
+    updateUI();
+  </script>
+</body>
+</html>
