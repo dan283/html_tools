@@ -264,7 +264,7 @@
       <button class="active" data-view="dashboard"><span>Dashboard</span><span class="pill" id="pillYear"></span></button>
       <button data-view="invoices"><span>Invoices</span><span class="pill" id="pillInvoices">0</span></button>
       <button data-view="clients"><span>Clients</span><span class="pill" id="pillClients">0</span></button>
-      <button data-view="settings"><span>Settings</span><span class="pill">JSON</span></button>
+      <button data-view="settings"><span>Settings / Company</span><span class="pill">JSON</span></button>
       <button data-view="help"><span>Help</span><span class="pill">?</span></button>
     </div>
   </aside>
@@ -371,6 +371,27 @@
     const sym = currencySymbols[cur] || "";
     const val = (Math.round((n||0)*100)/100).toFixed(2);
     return sym + val;
+  }
+
+  function fmtMoneyPdf(n, cur){
+    const pdfSafeSymbols = { NZD:"NZ$", USD:"$", EUR:"EUR ", GBP:"GBP ", HUF:"HUF ", AUD:"A$", CAD:"C$" };
+    const sym = pdfSafeSymbols[cur] || ((cur && /^[\x20-\x7E]+$/.test(cur)) ? (cur + " ") : "");
+    const val = (Math.round((n||0)*100)/100).toFixed(2);
+    return sym + val;
+  }
+
+  function pdfSafeText(str){
+    return (str ?? "").toString()
+      .replace(/•/g, "-")
+      .replace(/€/g, "EUR ")
+      .replace(/£/g, "GBP ")
+      .replace(/₹/g, "INR ")
+      .replace(/¥/g, "JPY ")
+      .replace(/[‘’]/g, "'")
+      .replace(/[“”]/g, '"')
+      .replace(/[–—]/g, "-")
+      .replace(/[…]/g, "...")
+      .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "");
   }
 
   function toast(msg){
@@ -566,7 +587,7 @@
       ops.push(`${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
     }
     function pdfText(x,y,str,size=11, rgb=[0,0,0]){
-      const s = (str ?? "").toString().replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
+      const s = pdfSafeText(str).replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
       ops.push(`BT /F1 ${size} Tf ${rgb[0]} ${rgb[1]} ${rgb[2]} rg 1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm (${s}) Tj ET`);
     }
     function wrapText(textIn, maxChars){
@@ -711,8 +732,8 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
       const lineTotal = qty * unit * gstMul;
 
       pdfText(tableX + colDesc + 8, y - 14, String(qty || 0), 10, text);
-      pdfText(tableX + colDesc + colQty + 8, y - 14, fmtMoney(unit, inv.currency), 10, text);
-      pdfText(tableX + colDesc + colQty + colUnit + 8, y - 14, fmtMoney(lineTotal, inv.currency), 10, text);
+      pdfText(tableX + colDesc + colQty + 8, y - 14, fmtMoneyPdf(unit, inv.currency), 10, text);
+      pdfText(tableX + colDesc + colQty + colUnit + 8, y - 14, fmtMoneyPdf(lineTotal, inv.currency), 10, text);
 
       y -= rowH;
     }
@@ -734,21 +755,21 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
 
     // Subtotal + GST
     pdfText(totalsX + 12, totalsTop - 22, `Subtotal (excl. ${gstLabel})`, 10, muted);
-    pdfText(totalsX + 140, totalsTop - 22, fmtMoney(t.subtotal, inv.currency), 10, text);
+    pdfText(totalsX + 140, totalsTop - 22, fmtMoneyPdf(t.subtotal, inv.currency), 10, text);
 
     pdfText(totalsX + 12, totalsTop - 40, `${gstLabel}${gstRatePct?` ${gstRatePct}%`:``}`, 10, muted);
-    pdfText(totalsX + 140, totalsTop - 40, fmtMoney(t.tax, inv.currency), 10, text);
+    pdfText(totalsX + 140, totalsTop - 40, fmtMoneyPdf(t.tax, inv.currency), 10, text);
 
     // Total
     pdfText(totalsX + 12, totalsTop - 60, `Total (incl. ${gstLabel}${gstRatePct?` ${gstRatePct}%`:``})`, 10, muted);
-    pdfText(totalsX + 140, totalsTop - 60, fmtMoney(t.total, inv.currency), 11, text);
+    pdfText(totalsX + 140, totalsTop - 60, fmtMoneyPdf(t.total, inv.currency), 11, text);
 
     // Paid / Balance
     pdfText(totalsX + 12, totalsTop - 84, "Paid", 10, muted);
-    pdfText(totalsX + 140, totalsTop - 84, fmtMoney(t.paid, inv.currency), 10, text);
+    pdfText(totalsX + 140, totalsTop - 84, fmtMoneyPdf(t.paid, inv.currency), 10, text);
 
     pdfText(totalsX + 12, totalsTop - 102, "Balance", 10, muted);
-    pdfText(totalsX + 140, totalsTop - 102, fmtMoney(t.balance, inv.currency), 10, text);
+    pdfText(totalsX + 140, totalsTop - 102, fmtMoneyPdf(t.balance, inv.currency), 10, text);
 
     setStrokeRGB(orange[0], orange[1], orange[2]); setLineWidth(2);
     line(totalsX + 12, totalsTop - 114, totalsX + 228, totalsTop - 114);
@@ -959,7 +980,7 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
     document.querySelectorAll(".nav button").forEach(b=>{
       b.classList.toggle("active", b.dataset.view === view);
     });
-    const titleMap = {dashboard:"Dashboard", invoices:"Invoices", clients:"Clients", settings:"Settings", help:"Help"};
+    const titleMap = {dashboard:"Dashboard", invoices:"Invoices", clients:"Clients", settings:"Settings / Company", help:"Help"};
     document.getElementById("viewTitle").textContent = titleMap[view] || "Invoices";
 
     const leftHeader = document.getElementById("leftHeader");
@@ -1011,6 +1032,22 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
   }
 
   
+  function refreshInvoiceTotalsUi(inv){
+    if (!inv) return;
+    const t = invoiceTotals(inv);
+    const taxLabel = inv.taxLabel || "GST";
+    const taxRate = String(parseNum(inv.taxRate));
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    setText("totalsSubtotalLabel", `Subtotal (excl. ${taxLabel})`);
+    setText("totalsSubtotalValue", fmtMoney(t.subtotal, inv.currency));
+    setText("totalsTaxLabel", `${taxLabel} (${taxRate}%)`);
+    setText("totalsTaxValue", fmtMoney(t.tax, inv.currency));
+    setText("totalsTotalLabel", `Total (incl. ${taxLabel} ${taxRate}%)`);
+    setText("totalsTotalValue", fmtMoney(t.total, inv.currency));
+    setText("totalsPaidValue", fmtMoney(t.paid, inv.currency));
+    setText("totalsBalanceValue", fmtMoney(t.balance, inv.currency));
+  }
+
   function postRender(view){
     // Bind handlers that depend on freshly-rendered DOM.
     if (view === "invoices"){
@@ -1166,6 +1203,10 @@ function updateSelectedPill(){
         </div>
       </div>
 
+      <div class="hint" style="margin-top:10px">
+        The <b>From</b> section in the PDF uses the details under <b>Settings / Company</b> → <b>Business Details</b>.
+      </div>
+
       <div style="margin-top:10px">
         <label>Notes (internal)</label>
         <textarea id="invNotes" placeholder="Anything you want to remember…">${escapeHtml(inv.notes||"")}</textarea>
@@ -1196,17 +1237,17 @@ function updateSelectedPill(){
         </div>
         <div class="bd">
           <div class="grid2">
-            <div class="small muted">Subtotal (excl. ${escapeHtml(inv.taxLabel||"GST")})</div>
-            <div class="mono" style="text-align:right">${escapeHtml(fmtMoney(t.subtotal, inv.currency))}</div>
+            <div class="small muted" id="totalsSubtotalLabel">Subtotal (excl. ${escapeHtml(inv.taxLabel||"GST")})</div>
+            <div class="mono" id="totalsSubtotalValue" style="text-align:right">${escapeHtml(fmtMoney(t.subtotal, inv.currency))}</div>
 
-            <div class="small muted">${escapeHtml(inv.taxLabel||"GST")} (${escapeHtml(String(inv.taxRate))}%)</div>
-            <div class="mono" style="text-align:right">${escapeHtml(fmtMoney(t.tax, inv.currency))}</div>
+            <div class="small muted" id="totalsTaxLabel">${escapeHtml(inv.taxLabel||"GST")} (${escapeHtml(String(inv.taxRate))}%)</div>
+            <div class="mono" id="totalsTaxValue" style="text-align:right">${escapeHtml(fmtMoney(t.tax, inv.currency))}</div>
 
-            <div class="small muted" style="font-weight:800">Total (incl. ${escapeHtml(inv.taxLabel||"GST")} ${escapeHtml(String(inv.taxRate))}%)</div>
-            <div class="mono" style="text-align:right; font-weight:900">${escapeHtml(fmtMoney(t.total, inv.currency))}</div>
+            <div class="small muted" id="totalsTotalLabel" style="font-weight:800">Total (incl. ${escapeHtml(inv.taxLabel||"GST")} ${escapeHtml(String(inv.taxRate))}%)</div>
+            <div class="mono" id="totalsTotalValue" style="text-align:right; font-weight:900">${escapeHtml(fmtMoney(t.total, inv.currency))}</div>
 
-            <div class="small muted">Paid</div><div class="mono" style="text-align:right">${escapeHtml(fmtMoney(t.paid, inv.currency))}</div>
-            <div class="small muted">Balance</div><div class="mono" style="text-align:right">${escapeHtml(fmtMoney(t.balance, inv.currency))}</div>
+            <div class="small muted">Paid</div><div class="mono" id="totalsPaidValue" style="text-align:right">${escapeHtml(fmtMoney(t.paid, inv.currency))}</div>
+            <div class="small muted">Balance</div><div class="mono" id="totalsBalanceValue" style="text-align:right">${escapeHtml(fmtMoney(t.balance, inv.currency))}</div>
           </div>
 
           <div class="sep"></div>
@@ -1305,8 +1346,7 @@ function updateSelectedPill(){
         inp.addEventListener("input", () => {
           inv.items[idx][k] = (k === "qty" || k === "unit") ? parseNum(inp.value) : inp.value;
           save();
-          // update totals without full rerender? simplest: rerender editor
-          setView("invoices");
+          refreshInvoiceTotalsUi(inv);
         });
       });
     });
