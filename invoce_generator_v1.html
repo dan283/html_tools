@@ -544,7 +544,7 @@
 
   // ---------- PDF (direct download, no print dialog) ----------
   // Supports optional JPEG logo stored in state.settings.logoJpegDataUrl
-  function exportInvoicePdf(inv){
+  function exportInvoicePdf(inv, theme = "dark") {
     // Must be synchronous for browser gesture. If logo isn't ready, export without it.
     const logoDataUrl = state.settings.logoJpegDataUrl || "";
     const logoBytes = logoDataUrl.startsWith("data:image/jpeg") ? dataUrlBytes(logoDataUrl).bytes : null;
@@ -562,14 +562,17 @@
     const margin = 44;
     const topY = pageH - margin;
 
-    const orange = [242/255, 125/255, 12/255];
-    const bg = [0.08, 0.09, 0.10];           // page background
-    const panel = [0.14, 0.15, 0.17];        // cards/panels
-    const panelAlt = [0.12, 0.13, 0.15];     // alternating rows
-    const text = [0.92, 0.93, 0.95];         // primary text
-    const muted = [0.72, 0.74, 0.78];        // secondary text
-    const lineCol = [0.28, 0.30, 0.34];      // borders
-    const header = [0.11, 0.12, 0.14];       // header bar
+    const isLightPdf = theme === "light";
+    const orange = isLightPdf ? [31/255, 138/255, 167/255] : [242/255, 125/255, 12/255];
+    const bg = isLightPdf ? [1, 1, 1] : [0.08, 0.09, 0.10];                 // page background
+    const panel = isLightPdf ? [0.97, 0.985, 0.99] : [0.14, 0.15, 0.17];    // cards/panels
+    const panelAlt = isLightPdf ? [0.93, 0.965, 0.975] : [0.12, 0.13, 0.15];// alternating rows
+    const text = isLightPdf ? [0.09, 0.12, 0.16] : [0.92, 0.93, 0.95];      // primary text
+    const muted = isLightPdf ? [0.38, 0.45, 0.52] : [0.72, 0.74, 0.78];     // secondary text
+    const lineCol = isLightPdf ? [0.78, 0.84, 0.88] : [0.28, 0.30, 0.34];   // borders
+    const header = isLightPdf ? [0.88, 0.955, 0.975] : [0.11, 0.12, 0.14];  // header bar
+    const titleText = isLightPdf ? [0.06, 0.10, 0.14] : [1, 1, 1];
+    const tableHeaderText = isLightPdf ? [0.06, 0.10, 0.14] : [1, 1, 1];
 
     const ops = [];
     const enc = new TextEncoder();
@@ -611,7 +614,7 @@
     setFillRGB(bg[0], bg[1], bg[2]);
     rect(0,0,pageW,pageH,true,false);
 
-    // Dark header (Blender-ish)
+    // Header
     const pdfHeaderH = 96;
     const headerY = pageH - pdfHeaderH;
 
@@ -641,7 +644,7 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
     if (subtitle) pdfText(headLeft, headerY + pdfHeaderH - 34, subtitle, 10, muted);
 
     // Title + meta (right)
-    pdfText(pageW - margin - 190, headerY + pdfHeaderH - 34, "INVOICE", 24, [1,1,1]);
+    pdfText(pageW - margin - 190, headerY + pdfHeaderH - 34, "INVOICE", 24, titleText);
     pdfText(pageW - margin - 190, headerY + pdfHeaderH - 56, `Invoice #: ${inv.number || ""}`, 10, muted);
     pdfText(pageW - margin - 190, headerY + pdfHeaderH - 70, `Date: ${inv.issueDate || ""}`, 10, muted);
     pdfText(pageW - margin - 190, headerY + pdfHeaderH - 84, `Due Date: ${inv.dueDate || ""}`, 10, muted);
@@ -696,10 +699,10 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
     setStrokeRGB(lineCol[0], lineCol[1], lineCol[2]);
     rect(tableX, tableTop - headerH, tableW, headerH, false, true);
 
-    pdfText(tableX + 8, tableTop - 15, "DESCRIPTION", 9, [1,1,1]);
-    pdfText(tableX + colDesc + 8, tableTop - 15, "QTY", 9, [1,1,1]);
-    pdfText(tableX + colDesc + colQty + 8, tableTop - 15, "PRICE", 9, [1,1,1]);
-    pdfText(tableX + colDesc + colQty + colUnit + 8, tableTop - 15, "TOTAL (incl. GST)", 9, [1,1,1]);
+    pdfText(tableX + 8, tableTop - 15, "DESCRIPTION", 9, tableHeaderText);
+    pdfText(tableX + colDesc + 8, tableTop - 15, "QTY", 9, tableHeaderText);
+    pdfText(tableX + colDesc + colQty + 8, tableTop - 15, "PRICE", 9, tableHeaderText);
+    pdfText(tableX + colDesc + colQty + colUnit + 8, tableTop - 15, "TOTAL (incl. GST)", 9, tableHeaderText);
 
     let y = tableTop - headerH;
     const items = (inv.items || []).filter(it => String(it.desc||"").trim() || parseNum(it.unit) || parseNum(it.qty));
@@ -848,8 +851,9 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
     parts.push(strBytes(`trailer\n<< /Size ${maxObj+1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`));
 
     const pdfBytes = concatBytes(parts);
-    downloadBlob(pdfBytes, "application/pdf", safeFilename(inv.number || "invoice") + ".pdf");
-    toast("PDF exported" + (logoObj ? "" : " (logo not embedded yet)"));
+    const suffix = isLightPdf ? "_light" : "";
+    downloadBlob(pdfBytes, "application/pdf", safeFilename(inv.number || "invoice") + suffix + ".pdf");
+    toast((isLightPdf ? "Light PDF exported" : "PDF exported") + (logoObj ? "" : " (logo not embedded yet)"));
   }
 
   function safeFilename(s){
@@ -1254,7 +1258,10 @@ function updateSelectedPill(){
 
           <div class="row" style="justify-content:space-between">
             <button class="btn good" id="btnAddPayment">+ Add payment</button>
-            <button class="btn primary" id="btnExportPdf">Export PDF</button>
+            <div class="right-actions">
+              <button class="btn" id="btnExportPdfLight">Export Light PDF</button>
+              <button class="btn primary" id="btnExportPdf">Export Dark PDF</button>
+            </div>
           </div>
 
           <div style="margin-top:10px">
@@ -1385,7 +1392,8 @@ function updateSelectedPill(){
       save(); setView("invoices");
     });
 
-    bind("btnExportPdf", "click", () => exportInvoicePdf(inv));
+    bind("btnExportPdf", "click", () => exportInvoicePdf(inv, "dark"));
+    bind("btnExportPdfLight", "click", () => exportInvoicePdf(inv, "light"));
 
     bind("btnApplyQuick", "click", () => {
       const desc = document.getElementById("qaDesc").value.trim() || inv.what || inv.source || "Work";
@@ -1794,7 +1802,7 @@ function updateSelectedPill(){
         <ul>
           <li><b>Invoices</b> support line items, tax, and multiple payments (partial paid).</li>
           <li><b>Dashboard</b> shows paid income, outstanding, and breakdown by client + source + what.</li>
-          <li><b>PDF export</b> downloads a real PDF file (no print dialog).</li>
+          <li><b>PDF export</b> downloads a real PDF file (no print dialog). Use <b>Export Dark PDF</b> for the Blender-style look, or <b>Export Light PDF</b> for a white-background invoice.</li>
           <li>To embed the logo in PDFs: go to <b>Settings</b> and upload your logo once.</li>
         </ul>
       </div>
