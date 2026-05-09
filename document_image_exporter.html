@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Document Image Extractor Pro</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+:root{
+    --bg:#0f172a;
+    --panel:#111827;
+    --panel2:#1f2937;
+    --accent:#3b82f6;
+    --accent2:#60a5fa;
+    --text:#f3f4f6;
+    --muted:#9ca3af;
+    --success:#10b981;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Inter,system-ui,sans-serif;
+    background:
+        radial-gradient(circle at top left,#1e3a8a55,transparent 30%),
+        radial-gradient(circle at bottom right,#0ea5e955,transparent 30%),
+        var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:30px;
+}
+
+.card{
+    width:min(900px,100%);
+    background:rgba(17,24,39,.92);
+    backdrop-filter:blur(12px);
+    border:1px solid #ffffff15;
+    border-radius:24px;
+    padding:32px;
+    box-shadow:0 20px 60px #00000055;
+}
+
+h1{
+    margin-top:0;
+    font-size:2rem;
+}
+
+.subtitle{
+    color:var(--muted);
+    margin-bottom:24px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+.panel{
+    background:var(--panel2);
+    border-radius:18px;
+    padding:20px;
+}
+
+label{
+    display:block;
+    margin-bottom:8px;
+    font-size:.95rem;
+    color:#d1d5db;
+}
+
+input[type=file], select{
+    width:100%;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #ffffff20;
+    background:#0b1220;
+    color:white;
+}
+
+button{
+    margin-top:24px;
+    width:100%;
+    padding:16px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:white;
+    font-size:1rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+button:hover{
+    transform:translateY(-1px);
+    filter:brightness(1.1);
+}
+
+button:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+    transform:none;
+}
+
+#log{
+    margin-top:24px;
+    background:#020617;
+    border-radius:18px;
+    padding:18px;
+    min-height:180px;
+    overflow:auto;
+    white-space:pre-wrap;
+    color:#bbf7d0;
+    border:1px solid #ffffff10;
+}
+
+.badges{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:10px;
+}
+
+.badge{
+    background:#1e293b;
+    color:#cbd5e1;
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:.85rem;
+}
+
+.footer{
+    margin-top:18px;
+    color:var(--muted);
+    font-size:.85rem;
+}
+
+@media(max-width:700px){
+    .grid{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Document Image Extractor Pro</h1>
+    <div class="subtitle">
+        Extract embedded images from office documents and optionally convert formats.
+    </div>
+
+    <div class="badges">
+        <div class="badge">DOCX</div>
+        <div class="badge">PPTX</div>
+        <div class="badge">XLSX</div>
+        <div class="badge">ODT</div>
+        <div class="badge">ODS</div>
+        <div class="badge">ODP</div>
+    </div>
+
+    <div class="grid" style="margin-top:24px">
+        <div class="panel">
+            <label>Select document</label>
+            <input type="file" id="fileInput"
+                accept=".docx,.pptx,.xlsx,.odt,.ods,.odp">
+        </div>
+
+        <div class="panel">
+            <label>Export image format</label>
+            <select id="formatSelect">
+                <option value="original">Keep Original</option>
+                <option value="png">PNG</option>
+                <option value="jpg">JPG</option>
+                <option value="webp">WEBP</option>
+            </select>
+        </div>
+    </div>
+
+    <button id="extractBtn" disabled>
+        Extract Images
+    </button>
+
+    <div id="log">Waiting for document...</div>
+
+    <div class="footer">
+        Chrome / Edge support direct folder export. Other browsers download ZIP.
+    </div>
+</div>
+
+<script>
+const input = document.getElementById("fileInput");
+const btn = document.getElementById("extractBtn");
+const log = document.getElementById("log");
+const formatSelect = document.getElementById("formatSelect");
+
+let selectedFile = null;
+
+const mediaFolders = [
+    "word/media/",
+    "ppt/media/",
+    "xl/media/",
+    "Pictures/"
+];
+
+input.addEventListener("change", ()=>{
+    selectedFile = input.files[0];
+
+    if(selectedFile){
+        btn.disabled = false;
+        log.textContent = "Selected: " + selectedFile.name;
+    }
+});
+
+btn.addEventListener("click", async ()=>{
+    if(!selectedFile) return;
+
+    btn.disabled = true;
+    log.textContent = "Opening archive...\n";
+
+    try{
+        const buffer = await selectedFile.arrayBuffer();
+        const zip = await JSZip.loadAsync(buffer);
+
+        const imageFiles = Object.keys(zip.files).filter(path=>{
+            const lower = path.toLowerCase();
+
+            const inMedia = mediaFolders.some(f =>
+                lower.startsWith(f.toLowerCase())
+            );
+
+            const img = /\.(png|jpg|jpeg|gif|bmp|webp|tif|tiff|svg)$/i.test(lower);
+
+            return inMedia && img;
+        });
+
+        if(imageFiles.length === 0){
+            log.textContent += "No embedded images found.";
+            btn.disabled = false;
+            return;
+        }
+
+        log.textContent += `Found ${imageFiles.length} images.\n`;
+
+        if("showDirectoryPicker" in window){
+            await exportToFolder(zip,imageFiles);
+        }else{
+            await exportZip(zip,imageFiles);
+        }
+
+    }catch(err){
+        console.error(err);
+        log.textContent += "\nERROR:\n" + err.message;
+    }
+
+    btn.disabled = false;
+});
+
+async function convertBlob(blob, targetFormat){
+    if(targetFormat === "original"){
+        return blob;
+    }
+
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+
+    await new Promise((resolve,reject)=>{
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img,0,0);
+
+    URL.revokeObjectURL(url);
+
+    let mime = "image/png";
+
+    if(targetFormat === "jpg"){
+        mime = "image/jpeg";
+    }
+
+    if(targetFormat === "webp"){
+        mime = "image/webp";
+    }
+
+    return await new Promise(resolve=>{
+        canvas.toBlob(resolve,mime,0.95);
+    });
+}
+
+function renameFile(name, format){
+    if(format === "original") return name;
+
+    const noExt = name.replace(/\.[^/.]+$/,"");
+    return noExt + "." + format;
+}
+
+async function exportToFolder(zip,imageFiles){
+    log.textContent += "Choose export folder...\n";
+
+    const dir = await window.showDirectoryPicker();
+
+    for(const path of imageFiles){
+        const originalBlob = await zip.files[path].async("blob");
+        const converted = await convertBlob(originalBlob, formatSelect.value);
+
+        const name = renameFile(path.split("/").pop(), formatSelect.value);
+
+        const fileHandle = await dir.getFileHandle(name,{create:true});
+        const writable = await fileHandle.createWritable();
+
+        await writable.write(converted);
+        await writable.close();
+
+        log.textContent += "Saved: " + name + "\n";
+    }
+
+    log.textContent += "\nDone.";
+}
+
+async function exportZip(zip,imageFiles){
+    log.textContent += "Creating ZIP export...\n";
+
+    const outZip = new JSZip();
+
+    for(const path of imageFiles){
+        const originalBlob = await zip.files[path].async("blob");
+        const converted = await convertBlob(originalBlob, formatSelect.value);
+
+        const name = renameFile(path.split("/").pop(), formatSelect.value);
+
+        outZip.file(name,converted);
+
+        log.textContent += "Added: " + name + "\n";
+    }
+
+    const blob = await outZip.generateAsync({type:"blob"});
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = selectedFile.name.replace(/\.[^.]+$/,"") + "_images.zip";
+    a.click();
+
+    log.textContent += "\nZIP downloaded.";
+}
+</script>
+
+</body>
+</html>
