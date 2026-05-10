@@ -368,15 +368,29 @@
   }
 
   function fmtMoney(n, cur){
-    const sym = currencySymbols[cur] || "";
-    const val = (Math.round((n||0)*100)/100).toFixed(2);
+    const currency = cur || state.settings.defaultCurrency || "";
+    const amount = Number(n || 0);
+
+    if (currency === "HUF") {
+      return "HUF " + Math.round(amount).toLocaleString("en-US");
+    }
+
+    const sym = currencySymbols[currency] || (currency ? currency + " " : "");
+    const val = amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return sym + val;
   }
 
   function fmtMoneyPdf(n, cur){
-    const pdfSafeSymbols = { NZD:"NZ$", USD:"$", EUR:"EUR ", GBP:"GBP ", HUF:"HUF ", AUD:"A$", CAD:"C$" };
-    const sym = pdfSafeSymbols[cur] || ((cur && /^[\x20-\x7E]+$/.test(cur)) ? (cur + " ") : "");
-    const val = (Math.round((n||0)*100)/100).toFixed(2);
+    const currency = cur || state.settings.defaultCurrency || "";
+    const amount = Number(n || 0);
+
+    if (currency === "HUF") {
+      return "HUF " + Math.round(amount).toLocaleString("en-US");
+    }
+
+    const pdfSafeSymbols = { NZD:"NZ$", USD:"$", EUR:"EUR ", GBP:"GBP ", AUD:"A$", CAD:"C$" };
+    const sym = pdfSafeSymbols[currency] || ((currency && /^[\x20-\x7E]+$/.test(currency)) ? (currency + " ") : "");
+    const val = amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return sym + val;
   }
 
@@ -563,16 +577,16 @@
     const topY = pageH - margin;
 
     const isLightPdf = theme === "light";
-    const orange = isLightPdf ? [31/255, 138/255, 167/255] : [242/255, 125/255, 12/255];
-    const bg = isLightPdf ? [1, 1, 1] : [0.08, 0.09, 0.10];                 // page background
-    const panel = isLightPdf ? [0.97, 0.985, 0.99] : [0.14, 0.15, 0.17];    // cards/panels
-    const panelAlt = isLightPdf ? [0.93, 0.965, 0.975] : [0.12, 0.13, 0.15];// alternating rows
-    const text = isLightPdf ? [0.09, 0.12, 0.16] : [0.92, 0.93, 0.95];      // primary text
-    const muted = isLightPdf ? [0.38, 0.45, 0.52] : [0.72, 0.74, 0.78];     // secondary text
-    const lineCol = isLightPdf ? [0.78, 0.84, 0.88] : [0.28, 0.30, 0.34];   // borders
-    const header = isLightPdf ? [0.88, 0.955, 0.975] : [0.11, 0.12, 0.14];  // header bar
-    const titleText = isLightPdf ? [0.06, 0.10, 0.14] : [1, 1, 1];
-    const tableHeaderText = isLightPdf ? [0.06, 0.10, 0.14] : [1, 1, 1];
+    const orange = [242/255, 125/255, 12/255];
+    const bg = isLightPdf ? [0.985, 0.982, 0.976] : [0.08, 0.09, 0.10];             // page background
+    const panel = isLightPdf ? [1, 1, 1] : [0.14, 0.15, 0.17];                    // cards/panels
+    const panelAlt = isLightPdf ? [0.94, 0.94, 0.935] : [0.12, 0.13, 0.15];       // alternating rows
+    const text = isLightPdf ? [0.13, 0.13, 0.13] : [0.92, 0.93, 0.95];            // primary text
+    const muted = isLightPdf ? [0.39, 0.39, 0.39] : [0.72, 0.74, 0.78];           // secondary text
+    const lineCol = isLightPdf ? [0.78, 0.77, 0.74] : [0.28, 0.30, 0.34];         // borders
+    const header = isLightPdf ? [0.92, 0.91, 0.885] : [0.11, 0.12, 0.14];         // header bar
+    const titleText = isLightPdf ? [0.10, 0.10, 0.10] : [1, 1, 1];
+    const tableHeaderText = isLightPdf ? [0.10, 0.10, 0.10] : [1, 1, 1];
 
     const ops = [];
     const enc = new TextEncoder();
@@ -779,7 +793,7 @@ const headLeft = PAD + (logoObj ? (logoSize + 18) : 0);
     setLineWidth(1);
 
     pdfText(totalsX + 12, totalsTop - 140, `TOTAL (incl. ${gstLabel})`, 12, text);
-    pdfText(totalsX + 140, totalsTop - 140, fmtMoney(t.total, inv.currency), 12, text);
+    pdfText(totalsX + 140, totalsTop - 140, fmtMoneyPdf(t.total, inv.currency), 12, text);
 
     // Terms
     const terms = (state.settings.defaultTerms || "").trim();
