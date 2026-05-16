@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SubLedger — Subscription Tracker</title>
+  <style>
+    :root {
+      --bg: #0f1218;
+      --panel: #171b24;
+      --panel-2: #1f2531;
+      --text: #eef2f7;
+      --muted: #9ba7b7;
+      --line: rgba(255,255,255,.1);
+      --accent: #ff9f43;
+      --accent-2: #ffd166;
+      --danger: #ff5c7a;
+      --good: #4cd97b;
+      --warn: #ffc857;
+      --shadow: 0 20px 60px rgba(0,0,0,.32);
+      --radius: 18px;
+      --input: #10141c;
+    }
+
+    [data-theme="light"] {
+      --bg: #f4f2ed;
+      --panel: #ffffff;
+      --panel-2: #f6f3ee;
+      --text: #1d2430;
+      --muted: #697384;
+      --line: rgba(29,36,48,.12);
+      --accent: #e57924;
+      --accent-2: #8f6c3a;
+      --danger: #c93d5d;
+      --good: #218f55;
+      --warn: #af7b10;
+      --shadow: 0 18px 46px rgba(80,64,38,.13);
+      --input: #f7f5f1;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,159,67,.20), transparent 32rem),
+        radial-gradient(circle at 80% 10%, rgba(255,209,102,.10), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; border: 0; }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 24px; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 46px; height: 46px; border-radius: 15px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid; place-items: center; color: #14100a; font-weight: 900;
+      box-shadow: var(--shadow);
+    }
+    h1 { margin: 0; font-size: clamp(26px, 4vw, 42px); letter-spacing: -0.045em; }
+    .sub { margin-top: 3px; color: var(--muted); font-size: 14px; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .btn {
+      background: var(--panel-2); color: var(--text); padding: 11px 14px;
+      border-radius: 13px; border: 1px solid var(--line);
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: .15s transform, .15s border-color, .15s background;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: rgba(255,159,67,.5); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #17100a; font-weight: 800; border: 0; }
+    .btn.danger { color: var(--danger); }
+    .btn.small { padding: 7px 10px; border-radius: 10px; font-size: 13px; }
+
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card {
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .metric { grid-column: span 3; padding: 18px; min-height: 126px; }
+    .metric .label { color: var(--muted); font-size: 13px; }
+    .metric .value { font-size: clamp(25px, 3.5vw, 38px); font-weight: 850; margin-top: 8px; letter-spacing: -.04em; }
+    .metric .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+    .panel { padding: 18px; }
+    .left { grid-column: span 8; }
+    .right { grid-column: span 4; }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center;
+    }
+    .search { flex: 1 1 230px; }
+    input, select, textarea {
+      width: 100%;
+      color: var(--text);
+      background: var(--input);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 12px;
+      outline: none;
+    }
+    textarea { min-height: 74px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: rgba(255,159,67,.7); box-shadow: 0 0 0 3px rgba(255,159,67,.13); }
+
+    .table-wrap { overflow: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 13px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    th { color: var(--muted); font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    td { font-size: 14px; }
+    .name { font-weight: 800; font-size: 15px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 9px; border-radius: 999px;
+      background: var(--panel-2); color: var(--muted); font-size: 12px;
+      border: 1px solid var(--line);
+    }
+    .soon { color: var(--warn); }
+    .overdue { color: var(--danger); }
+    .ok { color: var(--good); }
+    .muted { color: var(--muted); }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .section-title {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 12px;
+    }
+    h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+    .list { display: grid; gap: 10px; }
+    .renewal {
+      display: flex; justify-content: space-between; gap: 10px; align-items: center;
+      padding: 12px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--line);
+    }
+    .renewal strong { display: block; }
+    .renewal small { color: var(--muted); }
+
+    .chart-wrap { height: 260px; display: grid; align-items: end; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(36px, 1fr)); padding-top: 12px; }
+    .bar { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 34px; }
+    .bar-fill {
+      width: 100%; max-width: 48px; border-radius: 10px 10px 5px 5px;
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      min-height: 4px;
+    }
+    .bar-label { font-size: 11px; color: var(--muted); text-align: center; writing-mode: vertical-rl; max-height: 70px; overflow: hidden; }
+
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+    .cal-head { color: var(--muted); font-size: 12px; text-align: center; padding: 5px; }
+    .day {
+      min-height: 76px; background: var(--panel-2); border: 1px solid var(--line);
+      border-radius: 13px; padding: 7px; overflow: hidden;
+    }
+    .day.empty { opacity: .35; }
+    .day-num { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    .dot {
+      display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 11px; padding: 3px 5px; border-radius: 7px; background: rgba(255,159,67,.18);
+      margin-top: 3px;
+    }
+
+    dialog {
+      width: min(720px, calc(100vw - 26px));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 0;
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+    }
+    dialog::backdrop { background: rgba(0,0,0,.55); backdrop-filter: blur(4px); }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+    .modal-body { padding: 20px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .modal-foot { padding: 16px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px; }
+
+    .empty {
+      padding: 32px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+    }
+
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--panel); color: var(--text); border: 1px solid var(--line);
+      border-radius: 999px; padding: 12px 16px; box-shadow: var(--shadow); display: none;
+      z-index: 10;
+    }
+
+    @media (max-width: 980px) {
+      .metric { grid-column: span 6; }
+      .left, .right { grid-column: span 12; }
+      header { align-items: flex-start; flex-direction: column; }
+      .actions { justify-content: flex-start; }
+    }
+    @media (max-width: 620px) {
+      .wrap { padding: 14px; }
+      .metric { grid-column: span 12; }
+      .modal-body { grid-template-columns: 1fr; }
+      .calendar { gap: 4px; }
+      .day { min-height: 58px; padding: 5px; border-radius: 9px; }
+      .dot { font-size: 10px; padding: 2px 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">SL</div>
+        <div>
+          <h1>SubLedger</h1>
+          <div class="sub">Offline subscription tracker — totals normalized to NZD using offline FX rates.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="themeBtn">Toggle theme</button>
+        <button class="btn" id="exportJsonBtn">Export JSON</button>
+        <button class="btn" id="importJsonBtn">Import JSON</button>
+        <button class="btn" id="exportCsvBtn">Export CSV</button>
+        <button class="btn danger" id="clearBtn">Clear all</button>
+        <button class="btn primary" id="addBtn">+ Add subscription</button>
+      </div>
+    </header>
+
+    <section class="grid" id="metrics">
+      <div class="card metric"><div class="label">Monthly equivalent</div><div class="value" id="monthlyCost">—</div><div class="hint">Normalized across billing cycles</div></div>
+      <div class="card metric"><div class="label">Annual burn</div><div class="value" id="annualCost">—</div><div class="hint">Projected yearly cost</div></div>
+      <div class="card metric"><div class="label">Renewing this month</div><div class="value" id="monthCost">—</div><div class="hint" id="monthCount">—</div></div>
+      <div class="card metric"><div class="label">Spent so far</div><div class="value" id="spentCost">—</div><div class="hint">Since each subscription start date</div></div>
+    </section>
+
+    <main class="grid" style="margin-top:16px">
+      <section class="card panel left">
+        <div class="section-title">
+          <h2>Subscriptions</h2>
+          <span class="pill" id="activeCount">0 active</span>
+        </div>
+        <div class="toolbar">
+          <input class="search" id="search" placeholder="Search name, category, notes, card..." />
+          <select id="categoryFilter"><option value="">All categories</option></select>
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="cancelled">Cancelled / ending</option>
+          </select>
+          <select id="sortBy">
+            <option value="renewal">Sort: renewal date</option>
+            <option value="monthlyDesc">Sort: monthly cost high → low</option>
+            <option value="annualDesc">Sort: annual cost high → low</option>
+            <option value="name">Sort: name</option>
+            <option value="category">Sort: category</option>
+          </select>
+        </div>
+        <div id="duplicateWarning"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th><th>Category</th><th>Billing</th><th>Next renewal</th><th>Monthly eq.</th><th>Annual</th><th>Status</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="subRows"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty" style="display:none">No subscriptions yet. Add your first one and this dashboard wakes up.</div>
+      </section>
+
+      <aside class="right" style="display:grid; gap:16px;">
+        <section class="card panel">
+          <div class="section-title"><h2>Upcoming renewals</h2><span class="pill">Next 30 days</span></div>
+          <div class="list" id="upcoming"></div>
+        </section>
+
+        <section class="card panel">
+          <div class="section-title"><h2>Cancel savings preview</h2><span class="pill" id="cancelSavings">—</span></div>
+          <div class="muted" style="font-size:13px; margin-bottom:10px;">Tick items in the table by using “What if cancel?” to simulate savings.</div>
+          <div class="list" id="whatIfList"></div>
+        </section>
+      </aside>
+
+      <section class="card panel left">
+        <div class="section-title"><h2>Monthly cost by category</h2><span class="pill">normalized</span></div>
+        <div class="chart-wrap" id="categoryChart"></div>
+      </section>
+
+      <section class="card panel right">
+        <div class="section-title"><h2>Renewal calendar</h2><button class="btn small" id="todayBtn">This month</button></div>
+        <div class="toolbar">
+          <button class="btn small" id="prevMonth">←</button>
+          <strong id="calTitle" style="flex:1; text-align:center"></strong>
+          <button class="btn small" id="nextMonth">→</button>
+        </div>
+        <div class="calendar" id="calendar"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="subDialog">
+    <form method="dialog" id="subForm">
+      <div class="modal-head">
+        <h2 id="modalTitle">Add subscription</h2>
+        <button class="btn small" value="cancel" type="button" id="closeModal">Close</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId" />
+        <div class="field">
+          <label>Name</label>
+          <input id="name" required placeholder="Netflix, Adobe, iCloud..." />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input id="category" list="categoryList" placeholder="Streaming, software, cloud..." />
+          <datalist id="categoryList">
+            <option>Streaming</option><option>Software</option><option>Cloud</option><option>Business</option><option>Games</option><option>Phone</option><option>Utilities</option><option>Other</option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Price</label>
+          <input id="price" type="number" step="0.01" min="0" required placeholder="19.99" />
+        </div>
+        <div class="field">
+          <label>Currency</label>
+          <select id="currency">
+            <option>HUF</option><option>EUR</option><option>NZD</option><option>USD</option><option>GBP</option><option>AUD</option><option>CAD</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Billing cycle</label>
+          <select id="cycle">
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+            <option value="weekly">Weekly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="customMonths">Every X months</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Every X months, if custom</label>
+          <input id="customMonths" type="number" min="1" step="1" placeholder="6" />
+        </div>
+        <div class="field">
+          <label>Start / first billing date</label>
+          <input id="startDate" type="date" required />
+        </div>
+        <div class="field">
+          <label>Next renewal date</label>
+          <input id="nextDate" type="date" required />
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="status">
+            <option value="active">Active</option>
+            <option value="cancelled">Cancelled but still active</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Active until, if cancelled</label>
+          <input id="endDate" type="date" />
+        </div>
+        <div class="field">
+          <label>Payment card / account</label>
+          <input id="payment" placeholder="Revolut, Visa ending 1234..." />
+        </div>
+        <div class="field">
+          <label>Reminder window</label>
+          <select id="reminderDays">
+            <option value="3">3 days before</option>
+            <option value="7">7 days before</option>
+            <option value="14">14 days before</option>
+            <option value="30">30 days before</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Notes</label>
+          <textarea id="notes" placeholder="Login email, cancellation link, plan details..."></textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" id="deleteBtn" style="display:none">Delete</button>
+        <button class="btn" type="button" id="advanceBtn" style="display:none">Mark renewed</button>
+        <button class="btn primary" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input type="file" id="fileInput" accept="application/json" style="display:none" />
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = "subledger.v1";
+    const THEME_KEY = "subledger.theme";
+    let subs = [];
+    let whatIf = new Set();
+    let calDate = new Date();
+    const $ = id => document.getElementById(id);
+
+    // Offline static FX conversion rates to NZD
+    const FX_TO_NZD = {
+      NZD: 1,
+      USD: 1.68,
+      EUR: 1.82,
+      GBP: 2.13,
+      AUD: 1.08,
+      CAD: 1.23,
+      HUF: 0.0046
+    };
+
+    function nextDateFromDay(day) {
+      const d = new Date();
+      let n = new Date(d.getFullYear(), d.getMonth(), day);
+      if (n < stripTime(d)) n = new Date(d.getFullYear(), d.getMonth()+1, day);
+      return fmt(n);
+    }
+
+    function load() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      subs = saved ? JSON.parse(saved) : [];
+      document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) || "dark";
+      save();
+      render();
+    }
+
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(subs)); }
+    function toast(msg) {
+      $("toast").textContent = msg;
+      $("toast").style.display = "block";
+      setTimeout(() => $("toast").style.display = "none", 1900);
+    }
+
+    function stripTime(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+    function fmt(d) { return d.toISOString().slice(0,10); }
+    function dateObj(s) { return new Date(s + "T00:00:00"); }
+    function daysUntil(s) { return Math.ceil((dateObj(s) - stripTime(new Date())) / 86400000); }
+
+    function cycleMonths(s) {
+      if (s.cycle === "weekly") return 12 / 52;
+      if (s.cycle === "monthly") return 1;
+      if (s.cycle === "quarterly") return 3;
+      if (s.cycle === "yearly") return 12;
+      return Math.max(1, Number(s.customMonths || 1));
+    }
+
+    function monthlyEq(s) {
+      if (s.cycle === "weekly") return Number(s.price) * 52 / 12;
+      return Number(s.price) / cycleMonths(s);
+    }
+
+    function annualEq(s) {
+      if (s.cycle === "weekly") return Number(s.price) * 52;
+      return monthlyEq(s) * 12;
+    }
+
+    function money(amount, currency) {
+      try {
+        return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: currency === "HUF" ? 0 : 2 }).format(amount);
+      } catch {
+        return currency + " " + Number(amount).toLocaleString();
+      }
+    }
+
+    function toNZD(amount, currency) {
+      return Number(amount || 0) * (FX_TO_NZD[currency] || 1);
+    }
+
+    function totalNZD(items, calc) {
+      return items.reduce((sum, s) => {
+        return sum + toNZD(calc(s), s.currency);
+      }, 0);
+    }
+
+    function nzdMoney(value) {
+      return money(value, "NZD");
+    }
+
+    function activeSubs() {
+      const today = stripTime(new Date());
+      return subs.filter(s => s.status === "active" || (s.endDate && dateObj(s.endDate) >= today));
+    }
+
+    function paymentsUntilToday(s) {
+      let count = 0;
+      let d = dateObj(s.startDate);
+      const today = stripTime(new Date());
+      while (d <= today && count < 1000) {
+        count++;
+        d = addCycle(d, s);
+      }
+      return count * Number(s.price);
+    }
+
+    function addCycle(d, s) {
+      const nd = new Date(d);
+      if (s.cycle === "weekly") nd.setDate(nd.getDate() + 7);
+      else nd.setMonth(nd.getMonth() + cycleMonths(s));
+      return nd;
+    }
+
+    function nextRenewalAfter(s, afterDate) {
+      let d = dateObj(s.nextDate);
+      let guard = 0;
+      while (d < afterDate && guard++ < 1000) d = addCycle(d, s);
+      return d;
+    }
+
+    function render() {
+      renderMetrics();
+      renderFilters();
+      renderRows();
+      renderUpcoming();
+      renderWhatIf();
+      renderChart();
+      renderCalendar();
+    }
+
+    function renderMetrics() {
+      const active = activeSubs();
+      $("monthlyCost").textContent = nzdMoney(totalNZD(active, monthlyEq));
+      $("annualCost").textContent = nzdMoney(totalNZD(active, annualEq));
+      const now = new Date();
+      const thisMonth = active.filter(s => {
+        const d = dateObj(s.nextDate);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      });
+      $("monthCost").textContent = nzdMoney(totalNZD(thisMonth, s => Number(s.price)));
+      $("monthCount").textContent = `${thisMonth.length} renewal${thisMonth.length === 1 ? "" : "s"} this month`;
+      $("spentCost").textContent = nzdMoney(totalNZD(subs, paymentsUntilToday));
+      $("activeCount").textContent = `${active.length} active`;
+    }
+
+    function renderFilters() {
+      const cats = [...new Set(subs.map(s => s.category || "Other"))].sort();
+      const current = $("categoryFilter").value;
+      $("categoryFilter").innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option ${c===current?"selected":""}>${escapeHtml(c)}</option>`).join("");
+    }
+
+    function getVisibleSubs() {
+      const q = $("search").value.toLowerCase().trim();
+      const cat = $("categoryFilter").value;
+      const st = $("statusFilter").value;
+      let rows = subs.filter(s => {
+        const hay = [s.name, s.category, s.notes, s.payment, s.currency].join(" ").toLowerCase();
+        return (!q || hay.includes(q)) && (!cat || s.category === cat) && (!st || s.status === st);
+      });
+      const sort = $("sortBy").value;
+      rows.sort((a,b) => {
+        if (sort === "monthlyDesc") return monthlyEq(b) - monthlyEq(a);
+        if (sort === "annualDesc") return annualEq(b) - annualEq(a);
+        if (sort === "name") return a.name.localeCompare(b.name);
+        if (sort === "category") return (a.category || "").localeCompare(b.category || "");
+        return dateObj(a.nextDate) - dateObj(b.nextDate);
+      });
+      return rows;
+    }
+
+    function renderRows() {
+      const rows = getVisibleSubs();
+      $("emptyState").style.display = subs.length ? "none" : "block";
+      $("subRows").innerHTML = rows.map(s => {
+        const days = daysUntil(s.nextDate);
+        const dayClass = days < 0 ? "overdue" : days <= Number(s.reminderDays || 7) ? "soon" : "ok";
+        return `<tr>
+          <td><div class="name">${escapeHtml(s.name)}</div><div class="muted">${escapeHtml(s.payment || "")}</div></td>
+          <td><span class="pill">${escapeHtml(s.category || "Other")}</span></td>
+          <td>${money(Number(s.price), s.currency)}<br><span class="muted">${cycleLabel(s)}</span></td>
+          <td><span class="${dayClass}">${escapeHtml(s.nextDate)}</span><br><span class="muted">${daysText(days)}</span></td>
+          <td>${money(monthlyEq(s), s.currency)}</td>
+          <td>${money(annualEq(s), s.currency)}</td>
+          <td>${statusPill(s)}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn small" onclick="editSub('${s.id}')">Edit</button>
+              <button class="btn small" onclick="toggleWhatIf('${s.id}')">${whatIf.has(s.id) ? "Undo" : "What if cancel?"}</button>
+              <button class="btn small danger" onclick="quickDeleteSub('${s.id}')">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("");
+
+      const names = subs.map(s => s.name.trim().toLowerCase()).filter(Boolean);
+      const dupes = [...new Set(names.filter((n,i) => names.indexOf(n) !== i))];
+      $("duplicateWarning").innerHTML = dupes.length ? `<div class="renewal" style="margin-bottom:12px"><div><strong class="soon">Possible duplicate subscription</strong><small>${dupes.map(escapeHtml).join(", ")}</small></div></div>` : "";
+    }
+
+    function cycleLabel(s) {
+      if (s.cycle === "customMonths") return `every ${s.customMonths || 1} month(s)`;
+      return s.cycle;
+    }
+
+    function daysText(days) {
+      if (days < 0) return `${Math.abs(days)} day(s) overdue`;
+      if (days === 0) return "renews today";
+      return `in ${days} day(s)`;
+    }
+
+    function statusPill(s) {
+      if (s.status === "cancelled") return `<span class="pill overdue">Ending${s.endDate ? " " + escapeHtml(s.endDate) : ""}</span>`;
+      return `<span class="pill ok">Active</span>`;
+    }
+
+    function renderUpcoming() {
+      const today = stripTime(new Date());
+      const limit = new Date(today); limit.setDate(limit.getDate() + 30);
+      const items = activeSubs().map(s => ({...s, renewal: nextRenewalAfter(s, today)}))
+        .filter(s => s.renewal <= limit)
+        .sort((a,b) => a.renewal - b.renewal);
+      $("upcoming").innerHTML = items.length ? items.map(s => {
+        const ds = Math.ceil((s.renewal - today) / 86400000);
+        return `<div class="renewal"><div><strong>${escapeHtml(s.name)}</strong><small>${fmt(s.renewal)} · ${daysText(ds)}</small></div><div>${money(Number(s.price), s.currency)}</div></div>`;
+      }).join("") : `<div class="empty">Nothing renews in the next 30 days.</div>`;
+    }
+
+    function renderWhatIf() {
+      const items = subs.filter(s => whatIf.has(s.id));
+      $("cancelSavings").textContent = nzdMoney(totalNZD(items, annualEq));
+      $("whatIfList").innerHTML = items.length ? items.map(s => `<div class="renewal"><div><strong>${escapeHtml(s.name)}</strong><small>Annual saving</small></div><div>${money(annualEq(s), s.currency)}</div></div>`).join("") : `<div class="empty">Use “What if cancel?” on subscriptions to preview yearly savings.</div>`;
+    }
+
+    function renderChart() {
+      const byCat = {};
+      activeSubs().forEach(s => {
+        const cat = s.category || "Other";
+        const key = `${cat} (${s.currency})`;
+        byCat[key] = (byCat[key] || 0) + monthlyEq(s);
+      });
+      const max = Math.max(1, ...Object.values(byCat));
+      $("categoryChart").innerHTML = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,val]) => {
+        const h = Math.max(4, Math.round((val / max) * 180));
+        return `<div class="bar" title="${escapeHtml(cat)}: ${val.toFixed(2)}"><div class="bar-fill" style="height:${h}px"></div><div class="bar-label">${escapeHtml(cat)}</div></div>`;
+      }).join("") || `<div class="empty" style="grid-column:1/-1">No active data to chart.</div>`;
+    }
+
+    function renderCalendar() {
+      const y = calDate.getFullYear(), m = calDate.getMonth();
+      $("calTitle").textContent = calDate.toLocaleString(undefined, { month: "long", year: "numeric" });
+      const first = new Date(y, m, 1);
+      const startDay = (first.getDay() + 6) % 7;
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const heads = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => `<div class="cal-head">${d}</div>`).join("");
+      let cells = "";
+      for (let i = 0; i < startDay; i++) cells += `<div class="day empty"></div>`;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(y, m, d);
+        const renewals = activeSubs().filter(s => {
+          const r = nextRenewalAfter(s, new Date(y,m,1));
+          return r.getFullYear() === y && r.getMonth() === m && r.getDate() === d;
+        });
+        cells += `<div class="day"><div class="day-num">${d}</div>${renewals.slice(0,3).map(s => `<span class="dot">${escapeHtml(s.name)}</span>`).join("")}${renewals.length > 3 ? `<span class="dot">+${renewals.length-3} more</span>` : ""}</div>`;
+      }
+      $("calendar").innerHTML = heads + cells;
+    }
+
+    function openModal(s = null) {
+      $("modalTitle").textContent = s ? "Edit subscription" : "Add subscription";
+      $("editId").value = s?.id || "";
+      $("name").value = s?.name || "";
+      $("category").value = s?.category || "";
+      $("price").value = s?.price || "";
+      $("currency").value = s?.currency || "HUF";
+      $("cycle").value = s?.cycle || "monthly";
+      $("customMonths").value = s?.customMonths || "";
+      $("startDate").value = s?.startDate || fmt(new Date());
+      $("nextDate").value = s?.nextDate || fmt(new Date());
+      $("status").value = s?.status || "active";
+      $("endDate").value = s?.endDate || "";
+      $("payment").value = s?.payment || "";
+      $("reminderDays").value = s?.reminderDays || 7;
+      $("notes").value = s?.notes || "";
+      $("deleteBtn").style.display = s ? "inline-flex" : "none";
+      $("advanceBtn").style.display = s ? "inline-flex" : "none";
+      $("subDialog").showModal();
+    }
+
+    function editSub(id) { openModal(subs.find(s => s.id === id)); }
+    window.editSub = editSub;
+
+    function toggleWhatIf(id) {
+      whatIf.has(id) ? whatIf.delete(id) : whatIf.add(id);
+      render();
+    }
+    window.toggleWhatIf = toggleWhatIf;
+
+    function quickDeleteSub(id) {
+      const s = subs.find(x => x.id === id);
+      const label = s ? `"${s.name}"` : "this subscription";
+      if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+      subs = subs.filter(x => x.id !== id);
+      whatIf.delete(id);
+      save();
+      render();
+      toast("Subscription deleted");
+    }
+    window.quickDeleteSub = quickDeleteSub;
+
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    $("addBtn").onclick = () => openModal();
+    $("closeModal").onclick = () => $("subDialog").close();
+    $("themeBtn").onclick = () => {
+      const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem(THEME_KEY, next);
+    };
+
+    $("clearBtn").onclick = () => {
+      if (!confirm("Clear all saved subscriptions from this browser?")) return;
+      subs = [];
+      whatIf.clear();
+      save();
+      render();
+      toast("All subscriptions cleared");
+    };
+
+    ["search","categoryFilter","statusFilter","sortBy"].forEach(id => $(id).addEventListener("input", render));
+    $("prevMonth").onclick = () => { calDate.setMonth(calDate.getMonth() - 1); renderCalendar(); };
+    $("nextMonth").onclick = () => { calDate.setMonth(calDate.getMonth() + 1); renderCalendar(); };
+    $("todayBtn").onclick = () => { calDate = new Date(); renderCalendar(); };
+
+    $("subForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const id = $("editId").value || crypto.randomUUID();
+      const item = {
+        id,
+        name: $("name").value.trim(),
+        category: $("category").value.trim() || "Other",
+        price: Number($("price").value || 0),
+        currency: $("currency").value,
+        cycle: $("cycle").value,
+        customMonths: $("customMonths").value,
+        startDate: $("startDate").value,
+        nextDate: $("nextDate").value,
+        status: $("status").value,
+        endDate: $("endDate").value,
+        payment: $("payment").value.trim(),
+        reminderDays: Number($("reminderDays").value || 7),
+        notes: $("notes").value.trim()
+      };
+      const idx = subs.findIndex(s => s.id === id);
+      if (idx >= 0) subs[idx] = item; else subs.push(item);
+      save(); $("subDialog").close(); render(); toast("Saved");
+    });
+
+    $("deleteBtn").onclick = () => {
+      const id = $("editId").value;
+      if (!id || !confirm("Delete this subscription?")) return;
+      subs = subs.filter(s => s.id !== id);
+      whatIf.delete(id);
+      save(); $("subDialog").close(); render(); toast("Deleted");
+    };
+
+    $("advanceBtn").onclick = () => {
+      const id = $("editId").value;
+      const s = subs.find(x => x.id === id);
+      if (!s) return;
+      s.nextDate = fmt(addCycle(dateObj(s.nextDate), s));
+      $("nextDate").value = s.nextDate;
+      save(); render(); toast("Renewal advanced");
+    };
+
+    $("exportJsonBtn").onclick = () => downloadFile("subledger-backup.json", JSON.stringify({ exportedAt: new Date().toISOString(), subscriptions: subs }, null, 2), "application/json");
+    $("exportCsvBtn").onclick = () => {
+      const headers = ["name","category","price","currency","cycle","customMonths","startDate","nextDate","status","endDate","payment","reminderDays","monthlyEquivalent","annualEquivalent","notes"];
+      const lines = [headers.join(",")].concat(subs.map(s => headers.map(h => csvCell(h === "monthlyEquivalent" ? monthlyEq(s) : h === "annualEquivalent" ? annualEq(s) : s[h])).join(",")));
+      downloadFile("subledger.csv", lines.join("\n"), "text/csv");
+    };
+    $("importJsonBtn").onclick = () => $("fileInput").click();
+    $("fileInput").onchange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const imported = Array.isArray(data) ? data : data.subscriptions;
+      if (!Array.isArray(imported)) throw new Error("Invalid backup");
+      subs = imported.map(s => ({...s, id: s.id || crypto.randomUUID()}));
+      save(); render(); toast("Imported");
+      e.target.value = "";
+    };
+
+    function csvCell(v) {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }
+    function downloadFile(name, content, type) {
+      const blob = new Blob([content], {type});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    load();
+  </script>
+</body>
+</html>
